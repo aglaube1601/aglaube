@@ -11,6 +11,7 @@ import { Test } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ContatosService, UsuarioAutenticado } from './contatos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 
 describe('ContatosService', () => {
   let service: ContatosService;
@@ -39,7 +40,11 @@ describe('ContatosService', () => {
     };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [ContatosService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ContatosService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: AuditoriaService, useValue: { registrarLeitura: jest.fn() } },
+      ],
     }).compile();
 
     service = moduleRef.get(ContatosService);

@@ -24,6 +24,34 @@ export interface UsuarioAutenticado {
   permissaoEngajamentoPolitico: boolean;
 }
 
+export interface EngajamentoPoliticoInput {
+  status: string;
+  origem: string;
+  confianca: string;
+}
+
+export interface ContatoDetalhado {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  whatsapp: string | null;
+  dataNascimento: Date | null;
+  endereco: string | null;
+  profissao: string | null;
+  comunidadeId: string;
+  comunidade: { id: string; nome: string };
+  criadoEm: Date;
+  // Presente apenas quando o usuário tem permissaoEngajamentoPolitico —
+  // ver docstring de buscarPorId. Ausente, não null, quando sem permissão.
+  engajamentoPolitico?: {
+    status: string;
+    origem: string;
+    confianca: string;
+    criadoEm: Date;
+    registradoPorId: string;
+  } | null;
+}
+
 export interface CandidatoDuplicata {
   id: string;
   nome: string;
@@ -76,7 +104,7 @@ export class ContatosService {
         c.nome,
         c.telefone,
         com.nome as "comunidadeNome",
-        c.criado_em as "criadoEm",
+        c."criadoEm" as "criadoEm",
         GREATEST(
           similarity(c.nome, ${nome}),
           CASE WHEN ${telefone ?? null}::text IS NOT NULL
@@ -84,7 +112,7 @@ export class ContatosService {
                THEN 1.0 ELSE 0.0 END
         ) as similaridade
       FROM "Contato" c
-      JOIN "Comunidade" com ON com.id = c.comunidade_id
+      JOIN "Comunidade" com ON com.id = c."comunidadeId"
       WHERE similarity(c.nome, ${nome}) > ${LIMIAR_SIMILARIDADE_NOME}
          OR (${telefone ?? null}::text IS NOT NULL AND c.telefone = ${telefone ?? null})
       ORDER BY similaridade DESC
@@ -183,7 +211,7 @@ export class ContatosService {
    */
   async atualizarEngajamento(
     contatoId: string,
-    novoEngajamento: CreateContatoDto['engajamentoPolitico'],
+    novoEngajamento: EngajamentoPoliticoInput | undefined,
     usuario: UsuarioAutenticado,
   ) {
     if (!usuario.permissaoEngajamentoPolitico) {
@@ -240,7 +268,10 @@ export class ContatosService {
    *      (nem null explícito) — e, corretamente, NENHUM log de leitura é
    *      gerado, porque nenhuma leitura de dado sensível aconteceu.
    */
-  async buscarPorId(contatoId: string, usuario: UsuarioAutenticado) {
+  async buscarPorId(
+    contatoId: string,
+    usuario: UsuarioAutenticado,
+  ): Promise<ContatoDetalhado> {
     const contato = await this.prisma.contato.findUnique({
       where: { id: contatoId },
       select: {

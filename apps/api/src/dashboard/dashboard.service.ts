@@ -114,12 +114,12 @@ export class DashboardService {
       this.prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*)::bigint as count
         FROM "Contato" c
-        JOIN "Comunidade" com ON com.id = c.comunidade_id
-        JOIN "Bairro" b ON b.id = com.bairro_id
-        JOIN "ZonaEleitoral" z ON z.id = b.zona_eleitoral_id
-        WHERE z.municipio_id = ${municipioId}
-          AND c.data_nascimento IS NOT NULL
-          AND EXTRACT(MONTH FROM c.data_nascimento) = ${agora.getMonth() + 1}
+        JOIN "Comunidade" com ON com.id = c."comunidadeId"
+        JOIN "Bairro" b ON b.id = com."bairroId"
+        JOIN "ZonaEleitoral" z ON z.id = b."zonaEleitoralId"
+        WHERE z."municipioId" = ${municipioId}
+          AND c."dataNascimento" IS NOT NULL
+          AND EXTRACT(MONTH FROM c."dataNascimento") = ${agora.getMonth() + 1}
       `.then((r) => Number(r[0]?.count ?? 0)),
     ]);
 

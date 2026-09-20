@@ -24,6 +24,7 @@ describe('ComunicacaoService', () => {
   beforeEach(async () => {
     prisma = {
       contato: { findMany: jest.fn() },
+      consentimento: { findMany: jest.fn().mockResolvedValue([]) },
       campanhaComunicacao: { create: jest.fn() },
       envioMensagem: { create: jest.fn() },
     };
@@ -99,7 +100,51 @@ describe('ComunicacaoService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('inclui filtro de consentimento ativo em toda consulta, independente do critério', async () => {
+    it('exclui contato sem nenhum registro de consentimento', async () => {
+      prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }]);
+      prisma.consentimento.findMany.mockResolvedValue([]);
+
+      const elegiveis = await service.buscarDestinatariosElegiveis(
+        'municipio-1',
+        CriterioPublico.TODOS_COM_CONSENTIMENTO,
+        FinalidadeComunicacao.COMUNICACAO_INSTITUCIONAL,
+      );
+
+      expect(elegiveis).toEqual([]);
+    });
+
+    it('inclui contato cujo consentimento MAIS RECENTE está ativo', async () => {
+      prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }]);
+      prisma.consentimento.findMany.mockResolvedValue([{ contatoId: 'c1', status: 'ativo' }]);
+
+      const elegiveis = await service.buscarDestinatariosElegiveis(
+        'municipio-1',
+        CriterioPublico.TODOS_COM_CONSENTIMENTO,
+        FinalidadeComunicacao.COMUNICACAO_INSTITUCIONAL,
+      );
+
+      expect(elegiveis).toEqual(['c1']);
+    });
+
+    it('EXCLUI contato que já foi "ativo" mas revogou depois — nunca soma "algum dia foi ativo"', async () => {
+      prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }]);
+      // orderBy: data desc — o mock já entrega na ordem que o service espera
+      // receber do banco: o registro mais recente (opt_out) primeiro.
+      prisma.consentimento.findMany.mockResolvedValue([
+        { contatoId: 'c1', status: 'opt_out' },
+        { contatoId: 'c1', status: 'ativo' },
+      ]);
+
+      const elegiveis = await service.buscarDestinatariosElegiveis(
+        'municipio-1',
+        CriterioPublico.TODOS_COM_CONSENTIMENTO,
+        FinalidadeComunicacao.COMUNICACAO_INSTITUCIONAL,
+      );
+
+      expect(elegiveis).toEqual([]);
+    });
+
+    it('não consulta consentimento quando não há candidatos por território/critério', async () => {
       prisma.contato.findMany.mockResolvedValue([]);
 
       await service.buscarDestinatariosElegiveis(
@@ -108,16 +153,17 @@ describe('ComunicacaoService', () => {
         FinalidadeComunicacao.COMUNICACAO_INSTITUCIONAL,
       );
 
-      const args = prisma.contato.findMany.mock.calls[0][0];
-      expect(args.where.consentimentos).toEqual({
-        some: { finalidade: FinalidadeComunicacao.COMUNICACAO_INSTITUCIONAL, status: 'ativo' },
-      });
+      expect(prisma.consentimento.findMany).not.toHaveBeenCalled();
     });
   });
 
   describe('idempotência de envio', () => {
     it('enfileira um envio por destinatário elegível', async () => {
       prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }]);
+      prisma.consentimento.findMany.mockResolvedValue([
+        { contatoId: 'c1', status: 'ativo' },
+        { contatoId: 'c2', status: 'ativo' },
+      ]);
       prisma.campanhaComunicacao.create.mockResolvedValue({ id: 'camp-1' });
       prisma.envioMensagem.create.mockResolvedValue({});
 
@@ -137,6 +183,7 @@ describe('ComunicacaoService', () => {
 
     it('trata violação de unique constraint (P2002) como duplicidade esperada, não erro', async () => {
       prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }]);
+      prisma.consentimento.findMany.mockResolvedValue([{ contatoId: 'c1', status: 'ativo' }]);
       prisma.campanhaComunicacao.create.mockResolvedValue({ id: 'camp-1' });
       prisma.envioMensagem.create.mockRejectedValue({ code: 'P2002' });
 
@@ -158,6 +205,7 @@ describe('ComunicacaoService', () => {
 
     it('propaga erro que NÃO é de duplicidade (não mascara bug real)', async () => {
       prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }]);
+      prisma.consentimento.findMany.mockResolvedValue([{ contatoId: 'c1', status: 'ativo' }]);
       prisma.campanhaComunicacao.create.mockResolvedValue({ id: 'camp-1' });
       prisma.envioMensagem.create.mockRejectedValue(new Error('conexão com banco perdida'));
 

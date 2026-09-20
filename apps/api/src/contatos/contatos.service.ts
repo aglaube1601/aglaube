@@ -61,6 +61,21 @@ export interface CandidatoDuplicata {
   similaridade: number; // 0 a 1 — score do pg_trgm
 }
 
+export interface ContatoResumo {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  comunidade: { id: string; nome: string };
+  criadoEm: Date;
+}
+
+export interface ListagemContatos {
+  itens: ContatoResumo[];
+  total: number;
+  pagina: number;
+  tamanhoPagina: number;
+}
+
 const LIMIAR_SIMILARIDADE_NOME = 0.4; // ajustável — ver nota de calibração abaixo
 
 @Injectable()
@@ -69,6 +84,56 @@ export class ContatosService {
     private readonly prisma: PrismaService,
     private readonly auditoriaService: AuditoriaService,
   ) {}
+
+  /**
+   * Listagem territorializada de contatos — nunca inclui EngajamentoPolitico
+   * (mesma regra do Dashboard: este é um endpoint de navegação/CRUD, não o
+   * lugar onde dado sensível é exposto). `q` é um filtro simples (contains,
+   * case-insensitive), diferente do fuzzy match de buscarPossiveisDuplicatas
+   * — aqui o objetivo é navegar a base já cadastrada, não checar duplicidade
+   * antes de criar.
+   */
+  async listar(
+    municipioId: string,
+    opts: { comunidadeId?: string; q?: string; pagina?: number; tamanhoPagina?: number },
+  ): Promise<ListagemContatos> {
+    // Sem isso, um municipioId ausente vira "sem filtro" no Prisma (campo
+    // undefined é ignorado no where) — vazaria contatos de outros
+    // municípios assim que o sistema deixar de ser de município único.
+    if (!municipioId) {
+      throw new BadRequestException('municipioId é obrigatório.');
+    }
+
+    const pagina = opts.pagina && opts.pagina > 0 ? opts.pagina : 1;
+    const tamanhoPagina = Math.min(opts.tamanhoPagina && opts.tamanhoPagina > 0 ? opts.tamanhoPagina : 25, 100);
+
+    const where = {
+      comunidade: {
+        ...(opts.comunidadeId ? { id: opts.comunidadeId } : {}),
+        bairro: { zonaEleitoral: { municipioId } },
+      },
+      ...(opts.q ? { nome: { contains: opts.q, mode: 'insensitive' as const } } : {}),
+    };
+
+    const [itens, total] = await Promise.all([
+      this.prisma.contato.findMany({
+        where,
+        select: {
+          id: true,
+          nome: true,
+          telefone: true,
+          comunidade: { select: { id: true, nome: true } },
+          criadoEm: true,
+        },
+        orderBy: { nome: 'asc' },
+        skip: (pagina - 1) * tamanhoPagina,
+        take: tamanhoPagina,
+      }),
+      this.prisma.contato.count({ where }),
+    ]);
+
+    return { itens, total, pagina, tamanhoPagina };
+  }
 
   /**
    * Busca candidatos a duplicata por similaridade de nome (pg_trgm) OU

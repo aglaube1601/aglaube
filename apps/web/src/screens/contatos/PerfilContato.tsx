@@ -28,6 +28,21 @@ interface Interacao {
   data: string;
 }
 
+interface ConsentimentoAtual {
+  finalidade: string;
+  status: string;
+  origem: string | null;
+  data: string;
+}
+
+const FINALIDADE_PADRAO = 'comunicacao_institucional';
+
+const OPCOES_CONSENTIMENTO = [
+  { valor: 'ativo', rotulo: 'Sim, aceitou' },
+  { valor: 'opt_out', rotulo: 'Não aceitou' },
+  { valor: 'nao_perguntado', rotulo: 'Não perguntado ainda' },
+];
+
 const TIPOS_INTERACAO = [
   'ligacao',
   'mensagem',
@@ -51,6 +66,9 @@ export function PerfilContato() {
   const [novaDescricao, setNovaDescricao] = useState('');
   const [salvandoInteracao, setSalvandoInteracao] = useState(false);
 
+  const [consentimentos, setConsentimentos] = useState<ConsentimentoAtual[]>([]);
+  const [salvandoConsentimento, setSalvandoConsentimento] = useState(false);
+
   const [mostrarDemanda, setMostrarDemanda] = useState(false);
   const [categoriaDemanda, setCategoriaDemanda] = useState('');
   const [descricaoDemanda, setDescricaoDemanda] = useState('');
@@ -67,9 +85,28 @@ export function PerfilContato() {
       .get<Interacao[]>(`/contatos/${id}/interacoes`)
       .then(setInteracoes)
       .catch(() => undefined);
+    api
+      .get<ConsentimentoAtual[]>(`/contatos/${id}/consentimento`)
+      .then(setConsentimentos)
+      .catch(() => undefined);
   }
 
   useEffect(carregar, [id]);
+
+  const statusAtualConsentimento = consentimentos.find((c) => c.finalidade === FINALIDADE_PADRAO)?.status;
+
+  async function registrarConsentimento(status: string) {
+    if (!id) return;
+    setSalvandoConsentimento(true);
+    try {
+      await api.post(`/contatos/${id}/consentimento`, { finalidade: FINALIDADE_PADRAO, status });
+      carregar();
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : 'Falha ao registrar consentimento.');
+    } finally {
+      setSalvandoConsentimento(false);
+    }
+  }
 
   async function adicionarInteracao(e: FormEvent) {
     e.preventDefault();
@@ -155,6 +192,59 @@ export function PerfilContato() {
           <Row label={contato.telefone ?? 'sem telefone'} />
           <Row label={contato.endereco ?? 'sem endereço'} />
           <Row label={contato.profissao ?? 'sem profissão informada'} last />
+        </div>
+
+        <div className="card" style={{ marginBottom: 12 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            💬 Consentimento de comunicação
+            {statusAtualConsentimento && (
+              <span
+                className="badge"
+                style={{
+                  background:
+                    statusAtualConsentimento === 'ativo'
+                      ? 'rgba(45,110,79,0.12)'
+                      : statusAtualConsentimento === 'opt_out'
+                        ? 'rgba(184,84,80,0.12)'
+                        : 'var(--line)',
+                  color:
+                    statusAtualConsentimento === 'ativo'
+                      ? 'var(--veryhigh)'
+                      : statusAtualConsentimento === 'opt_out'
+                        ? 'var(--danger)'
+                        : 'var(--muted)',
+                }}
+              >
+                {OPCOES_CONSENTIMENTO.find((o) => o.valor === statusAtualConsentimento)?.rotulo}
+              </span>
+            )}
+          </p>
+          <p style={{ margin: '0 0 10px', fontSize: 11.5, color: 'var(--muted)' }}>
+            A pessoa aceita receber mensagens institucionais (aniversário, notícias, lembretes)?
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {OPCOES_CONSENTIMENTO.map((op) => (
+              <button
+                key={op.valor}
+                onClick={() => registrarConsentimento(op.valor)}
+                disabled={salvandoConsentimento}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 12px',
+                  borderRadius: 9,
+                  textAlign: 'left',
+                  border: statusAtualConsentimento === op.valor ? '2px solid var(--teal)' : '1px solid var(--line)',
+                  background: statusAtualConsentimento === op.valor ? 'var(--teal-light)' : '#fff',
+                  cursor: 'pointer',
+                  fontSize: 12.5,
+                }}
+              >
+                {op.rotulo}
+              </button>
+            ))}
+          </div>
         </div>
 
         {contato.engajamentoPolitico !== undefined && (

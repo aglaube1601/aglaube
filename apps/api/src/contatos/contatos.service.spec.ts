@@ -34,7 +34,7 @@ describe('ContatosService', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
       $transaction: jest.fn((cb) => cb(prisma)),
       comunidade: { findUnique: jest.fn() },
-      contato: { create: jest.fn() },
+      contato: { create: jest.fn(), findMany: jest.fn(), count: jest.fn() },
       engajamentoPolitico: { create: jest.fn(), updateMany: jest.fn() },
       logAuditoria: { create: jest.fn() },
     };
@@ -204,6 +204,37 @@ describe('ContatosService', () => {
       const resultado = await service.buscarPossiveisDuplicatas('Jo');
       expect(resultado).toEqual([]);
       expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('regra: listagem nunca vaza contato de outro município e nunca inclui engajamento', () => {
+    it('rejeita listagem sem municipioId — undefined viraria "sem filtro" no Prisma', async () => {
+      await expect(service.listar('', {})).rejects.toThrow(BadRequestException);
+      expect(prisma.contato.findMany).not.toHaveBeenCalled();
+    });
+
+    it('filtra por território (município), aplica q e nunca seleciona engajamentoPolitico', async () => {
+      prisma.contato.findMany.mockResolvedValue([]);
+      prisma.contato.count.mockResolvedValue(0);
+
+      await service.listar('municipio-1', { q: 'Maria', pagina: 2, tamanhoPagina: 10 });
+
+      const args = prisma.contato.findMany.mock.calls[0][0];
+      expect(args.where.comunidade.bairro.zonaEleitoral.municipioId).toBe('municipio-1');
+      expect(args.where.nome).toEqual({ contains: 'Maria', mode: 'insensitive' });
+      expect(args.skip).toBe(10); // (pagina 2 - 1) * tamanhoPagina 10
+      expect(args.take).toBe(10);
+      expect(args.select).not.toHaveProperty('engajamentoPolitico');
+    });
+
+    it('limita tamanhoPagina a 100 mesmo se pedido maior', async () => {
+      prisma.contato.findMany.mockResolvedValue([]);
+      prisma.contato.count.mockResolvedValue(0);
+
+      const resultado = await service.listar('municipio-1', { tamanhoPagina: 500 });
+
+      expect(resultado.tamanhoPagina).toBe(100);
+      expect(prisma.contato.findMany.mock.calls[0][0].take).toBe(100);
     });
   });
 });

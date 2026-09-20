@@ -20,6 +20,10 @@ import { ContatosService } from './contatos/contatos.service';
 import { ContatosController } from './contatos/contatos.controller';
 import { ComunidadesService, ComunidadesController } from './comunidades/comunidades.controller';
 import { MunicipiosService, MunicipiosController } from './municipios/municipios.controller';
+import {
+  ConsentimentosService,
+  ConsentimentosController,
+} from './consentimentos/consentimentos.controller';
 import { DemandasService } from './demandas/demandas.service';
 import { DemandasController } from './demandas/demandas.controller';
 import { InteracoesService } from './interacoes/interacoes.service';
@@ -50,6 +54,7 @@ import { FilaEnvioService } from './comunicacao/fila-envio.service';
     ContatosController,
     ComunidadesController,
     MunicipiosController,
+    ConsentimentosController,
     DemandasController,
     InteracoesController,
     DashboardController,
@@ -65,6 +70,7 @@ import { FilaEnvioService } from './comunicacao/fila-envio.service';
     ContatosService,
     ComunidadesService,
     MunicipiosService,
+    ConsentimentosService,
     DemandasService,
     InteracoesService,
     DashboardService,

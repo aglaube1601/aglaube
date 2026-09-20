@@ -73,6 +73,15 @@ export class ComunicacaoService {
    * Filtro de público — a única fonte de verdade é Consentimento.status.
    * Um contato "elegível" por critério (ex: aniversariante da semana) mas
    * SEM consentimento ativo para a finalidade nunca entra na lista.
+   *
+   * Consentimento é APPEND-ONLY (ver ConsentimentosService) — por isso o
+   * filtro NÃO pode ser "existe algum registro ativo" (`some`): um "ativo"
+   * antigo seguido de um opt-out mais recente continuaria contando pra
+   * sempre. O que importa é o status MAIS RECENTE por (contato,
+   * finalidade), calculado aqui em duas consultas em vez de uma só —
+   * evita SQL raw pra uma agregação que o Prisma não expressa
+   * declarativamente, ao custo de uma segunda query já limitada ao
+   * conjunto de candidatos (nunca a base inteira).
    */
   async buscarDestinatariosElegiveis(
     municipioId: string,
@@ -85,9 +94,6 @@ export class ComunicacaoService {
     }
 
     const filtroTerritorio = { comunidade: { bairro: { zonaEleitoral: { municipioId } } } };
-    const filtroConsentimento = {
-      consentimentos: { some: { finalidade, status: 'ativo' } },
-    };
 
     const filtrosPorCriterio: Record<CriterioPublico, object> = {
       [CriterioPublico.ANIVERSARIANTES_SEMANA]: this.filtroAniversariantesSemana(),
@@ -96,16 +102,33 @@ export class ComunicacaoService {
       [CriterioPublico.LIDERANCAS_E_APOIADORES]: { lideranca: { isNot: null } },
     };
 
-    const contatos = await this.prisma.contato.findMany({
+    const candidatos = await this.prisma.contato.findMany({
       where: {
         ...filtroTerritorio,
-        ...filtroConsentimento,
         ...filtrosPorCriterio[criterio],
       },
       select: { id: true },
     });
 
-    return contatos.map((c) => c.id);
+    if (candidatos.length === 0) {
+      return [];
+    }
+
+    const candidatoIds = candidatos.map((c) => c.id);
+    const historicoConsentimento = await this.prisma.consentimento.findMany({
+      where: { contatoId: { in: candidatoIds }, finalidade },
+      orderBy: { data: 'desc' },
+      select: { contatoId: true, status: true },
+    });
+
+    const statusMaisRecentePorContato = new Map<string, string>();
+    for (const registro of historicoConsentimento) {
+      if (!statusMaisRecentePorContato.has(registro.contatoId)) {
+        statusMaisRecentePorContato.set(registro.contatoId, registro.status);
+      }
+    }
+
+    return candidatoIds.filter((id) => statusMaisRecentePorContato.get(id) === 'ativo');
   }
 
   private filtroAniversariantesSemana() {

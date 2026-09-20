@@ -9,6 +9,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // CORS: necessário pro frontend (apps/web, outra origem/porta) chamar a
+  // API do navegador. CORS_ORIGIN restringe em produção; sem ela, aceita
+  // qualquer origem — aceitável no estágio atual (MVP, sem deploy público).
+  app.enableCors({ origin: process.env.CORS_ORIGIN ?? true });
+
   // whitelist: true descarta silenciosamente campos não esperados no DTO —
   // importante especialmente em CreateUsuarioDto, onde um campo extra não
   // deve nem chegar perto do service.

@@ -19,6 +19,7 @@ import { AuthController, UsuariosController } from './auth/auth.controller';
 import { ContatosService } from './contatos/contatos.service';
 import { ContatosController } from './contatos/contatos.controller';
 import { ComunidadesService, ComunidadesController } from './comunidades/comunidades.controller';
+import { MunicipiosService, MunicipiosController } from './municipios/municipios.controller';
 import { DemandasService } from './demandas/demandas.service';
 import { DemandasController } from './demandas/demandas.controller';
 import { InteracoesService } from './interacoes/interacoes.service';
@@ -48,6 +49,7 @@ import { FilaEnvioService } from './comunicacao/fila-envio.service';
     UsuariosController,
     ContatosController,
     ComunidadesController,
+    MunicipiosController,
     DemandasController,
     InteracoesController,
     DashboardController,
@@ -62,6 +64,7 @@ import { FilaEnvioService } from './comunicacao/fila-envio.service';
     AuthService,
     ContatosService,
     ComunidadesService,
+    MunicipiosService,
     DemandasService,
     InteracoesService,
     DashboardService,

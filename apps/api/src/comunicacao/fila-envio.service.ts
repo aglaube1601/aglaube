@@ -1,18 +1,16 @@
 /**
  * fila-envio.service.ts
  *
- * MOCKADO propositalmente — sem integração real de WhatsApp ainda.
- * Quando a integração real entrar (BSP homologado: Twilio ou 360dialog,
- * ver arquitetura técnica), esta classe é o ÚNICO lugar que muda: troca
- * o log por um `queue.add()` do BullMQ de verdade, com rate limiting
- * configurado para o limite da API do WhatsApp Business.
- *
- * ComunicacaoService não deve saber ou se importar com essa troca —
- * é exatamente por isso que essa responsabilidade está isolada aqui
- * atrás de uma interface simples.
+ * Fila REAL via BullMQ/Redis — só o ENVIO em si ainda é simulado (ver
+ * envio.worker.ts). ComunicacaoService não sabe nem se importa com
+ * BullMQ — só chama enfileirar(), exatamente como quando isso era mock.
+ * Isso valida que o isolamento desenhado desde o início funcionou: trocar
+ * a implementação não tocou em nenhuma linha de comunicacao.service.ts.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Queue } from 'bullmq';
+import { conexaoRedis } from './redis-connection';
 
 export interface JobEnvio {
   envioId: string; // = idempotencyKey
@@ -20,18 +18,28 @@ export interface JobEnvio {
   campanhaId: string;
 }
 
+export const NOME_FILA_ENVIO = 'envio-whatsapp';
+
 @Injectable()
-export class FilaEnvioService {
+export class FilaEnvioService implements OnModuleDestroy {
   private readonly logger = new Logger(FilaEnvioService.name);
+  private readonly fila = new Queue<JobEnvio>(NOME_FILA_ENVIO, { connection: conexaoRedis() });
 
   async enfileirar(job: JobEnvio): Promise<void> {
-    // TODO(integração real): substituir por
-    //   await this.bullQueue.add('envio-whatsapp', job, {
-    //     jobId: job.envioId, // BullMQ também dedupe por jobId — dupla camada
-    //     attempts: 3,
-    //     backoff: { type: 'exponential', delay: 5000 },
-    //   });
-    // e configurar limiter da queue para respeitar o rate limit da Meta.
-    this.logger.log(`[MOCK] Envio enfileirado: ${JSON.stringify(job)}`);
+    // jobId = idempotencyKey: BullMQ também dedupe por jobId — camada
+    // extra além da unique constraint no banco (ver ComunicacaoService),
+    // que já é a garantia de verdade contra reprocessamento duplicado.
+    await this.fila.add(NOME_FILA_ENVIO, job, {
+      jobId: job.envioId,
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: { count: 500 },
+      removeOnFail: { count: 1000 },
+    });
+    this.logger.debug(`Job enfileirado: ${job.envioId}`);
+  }
+
+  async onModuleDestroy() {
+    await this.fila.close();
   }
 }

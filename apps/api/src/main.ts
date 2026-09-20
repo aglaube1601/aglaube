@@ -9,6 +9,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // Sem isso, OnModuleDestroy nunca dispara em SIGTERM/SIGINT — a conexão
+  // Redis do BullMQ (FilaEnvioService/EnvioWorker) ficaria pendurada em
+  // todo restart/deploy em vez de fechar limpo.
+  app.enableShutdownHooks();
+
   // CORS: necessário pro frontend (apps/web, outra origem/porta) chamar a
   // API do navegador. CORS_ORIGIN restringe em produção; sem ela, aceita
   // qualquer origem — aceitável no estágio atual (MVP, sem deploy público).

@@ -95,8 +95,26 @@ export class ComunicacaoService {
 
     const filtroTerritorio = { comunidade: { bairro: { zonaEleitoral: { municipioId } } } };
 
-    const filtrosPorCriterio: Record<CriterioPublico, object> = {
-      [CriterioPublico.ANIVERSARIANTES_SEMANA]: this.filtroAniversariantesSemana(),
+    // ANIVERSARIANTES_SEMANA precisa comparar só mês/dia (ignorando o ano
+    // de nascimento), inclusive virada de ano — o Prisma não expressa isso
+    // declarativamente num `where`, então filtra em memória sobre o
+    // conjunto já restrito por território (nunca a base inteira).
+    if (criterio === CriterioPublico.ANIVERSARIANTES_SEMANA) {
+      const comAniversario = await this.prisma.contato.findMany({
+        where: { ...filtroTerritorio, dataNascimento: { not: null } },
+        select: { id: true, dataNascimento: true },
+      });
+      const hoje = new Date();
+      const candidatoIds = comAniversario
+        .filter((c) => c.dataNascimento && this.aniversarioNosProximosDias(c.dataNascimento, hoje, 7))
+        .map((c) => c.id);
+      return this.filtrarPorConsentimentoAtivo(candidatoIds, finalidade);
+    }
+
+    const filtrosPorCriterio: Record<
+      Exclude<CriterioPublico, CriterioPublico.ANIVERSARIANTES_SEMANA>,
+      object
+    > = {
       [CriterioPublico.POR_COMUNIDADE]: { comunidadeId },
       [CriterioPublico.TODOS_COM_CONSENTIMENTO]: {},
       [CriterioPublico.LIDERANCAS_E_APOIADORES]: { lideranca: { isNot: null } },
@@ -110,11 +128,25 @@ export class ComunicacaoService {
       select: { id: true },
     });
 
-    if (candidatos.length === 0) {
+    return this.filtrarPorConsentimentoAtivo(
+      candidatos.map((c) => c.id),
+      finalidade,
+    );
+  }
+
+  /**
+   * Resolve o status MAIS RECENTE de Consentimento por contato (nunca
+   * "algum dia foi ativo" — ver docstring de buscarDestinatariosElegiveis)
+   * e devolve só os ids com status='ativo' para a finalidade pedida.
+   */
+  private async filtrarPorConsentimentoAtivo(
+    candidatoIds: string[],
+    finalidade: FinalidadeComunicacao,
+  ): Promise<string[]> {
+    if (candidatoIds.length === 0) {
       return [];
     }
 
-    const candidatoIds = candidatos.map((c) => c.id);
     const historicoConsentimento = await this.prisma.consentimento.findMany({
       where: { contatoId: { in: candidatoIds }, finalidade },
       orderBy: { data: 'desc' },
@@ -131,16 +163,21 @@ export class ComunicacaoService {
     return candidatoIds.filter((id) => statusMaisRecentePorContato.get(id) === 'ativo');
   }
 
-  private filtroAniversariantesSemana() {
-    const hoje = new Date();
-    const daqui7Dias = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000);
-    // Simplificação de MVP: compara mês+dia via SQL seria mais robusto para
-    // virada de ano — registrado como melhoria futura, não bloqueador.
-    return {
-      dataNascimento: { not: null },
-      // filtro fino de mês/dia fica na query raw quando este critério
-      // precisar de precisão (ex: 30/dez a 05/jan) — fora do escopo do MVP.
-    };
+  /**
+   * Compara só mês/dia de `dataNascimento` contra os próximos `dias` dias
+   * corridos a partir de `hoje` (inclusive hoje) — nunca o ano. Construir
+   * Date reais dia a dia (em vez de aritmética manual de dia-do-ano) é o
+   * que faz a virada de ano funcionar de graça: somar dias a um Date do
+   * JS já rola dezembro -> janeiro corretamente.
+   */
+  private aniversarioNosProximosDias(dataNascimento: Date, hoje: Date, dias: number): boolean {
+    for (let i = 0; i <= dias; i++) {
+      const data = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + i);
+      if (data.getMonth() === dataNascimento.getMonth() && data.getDate() === dataNascimento.getDate()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async criarCampanha(
@@ -182,11 +219,14 @@ export class ComunicacaoService {
     for (const contatoId of destinatarios) {
       // Idempotency key determinística: mesmo contato + mesma campanha
       // nunca gera dois envios, mesmo se este loop rodar de novo por
-      // retry de infraestrutura.
-      const idempotencyKey = `${campanha.id}:${contatoId}`;
+      // retry de infraestrutura. Sem ":" de propósito — é usada também
+      // como jobId do BullMQ (ver FilaEnvioService), que rejeita ":" em
+      // ID customizado (usa como separador interno de chave no Redis).
+      const idempotencyKey = `${campanha.id}_${contatoId}`;
 
+      let envio: { id: string };
       try {
-        await this.prisma.envioMensagem.create({
+        envio = await this.prisma.envioMensagem.create({
           data: {
             campanhaId: campanha.id,
             contatoId,
@@ -194,17 +234,28 @@ export class ComunicacaoService {
             status: 'pendente',
           },
         });
-        await this.filaEnvio.enfileirar({ envioId: idempotencyKey, contatoId, campanhaId: campanha.id });
-        enfileirados++;
       } catch (erro: any) {
         // Unique constraint violation em idempotencyKey = já foi
         // enfileirado antes. Não é erro do usuário, é o comportamento
         // correto e esperado do mecanismo de idempotência.
         if (erro?.code === 'P2002') {
           ignoradosPorDuplicidade++;
-        } else {
-          throw erro;
+          continue;
         }
+        throw erro;
+      }
+
+      try {
+        await this.filaEnvio.enfileirar({ envioId: idempotencyKey, contatoId, campanhaId: campanha.id });
+        enfileirados++;
+      } catch (erroFila) {
+        // O registro já foi criado no passo anterior — se o enfileiramento
+        // falhar agora (Redis fora do ar, etc.), desfaz o registro em vez
+        // de deixar um EnvioMensagem "pendente" órfão que nunca seria
+        // processado (e que bloquearia pra sempre uma nova tentativa,
+        // porque o idempotencyKey já existiria).
+        await this.prisma.envioMensagem.delete({ where: { id: envio.id } });
+        throw erroFila;
       }
     }
 

@@ -1,15 +1,20 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { useAuth, type PerfilUsuario } from '../lib/auth';
 
-const TABS = [
+// Espelha o RBAC de cada controller no backend — evita mostrar uma aba
+// que só vai devolver 403 pro perfil logado (ver *.controller.ts @Roles).
+const TABS: Array<{ to: string; label: string; icon: string; end?: boolean; perfis?: PerfilUsuario[] }> = [
   { to: '/', label: 'Painel', icon: '📊', end: true },
-  { to: '/mapa', label: 'Mapa', icon: '🗺️' },
+  { to: '/mapa', label: 'Mapa', icon: '🗺️', perfis: ['administrador', 'coordenador', 'visualizacao'] },
   { to: '/contatos', label: 'Contatos', icon: '👤' },
-  { to: '/comunicacao', label: 'Mensagens', icon: '💬' },
+  { to: '/comunicacao', label: 'Mensagens', icon: '💬', perfis: ['administrador', 'coordenador', 'operador'] },
+  { to: '/eleitoral', label: 'Eleitoral', icon: '🗳️', perfis: ['administrador', 'coordenador', 'visualizacao'] },
+  { to: '/auditoria', label: 'Auditoria', icon: '🛡️', perfis: ['administrador'] },
 ];
 
 export function Shell() {
   const { usuario, municipio, logout } = useAuth();
+  const tabsVisiveis = TABS.filter((tab) => !tab.perfis || (usuario && tab.perfis.includes(usuario.perfil)));
 
   return (
     <div className="app-shell">
@@ -28,7 +33,7 @@ export function Shell() {
       </div>
 
       <nav className="bottom-nav">
-        {TABS.map((tab) => (
+        {tabsVisiveis.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}

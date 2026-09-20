@@ -8,6 +8,8 @@ import { BuscarContato } from './screens/contatos/BuscarContato';
 import { CadastroContato } from './screens/contatos/CadastroContato';
 import { PerfilContato } from './screens/contatos/PerfilContato';
 import { Comunicacao } from './screens/Comunicacao';
+import { PainelEleitoral } from './screens/PainelEleitoral';
+import { Auditoria } from './screens/Auditoria';
 
 function RotaProtegida({ children }: { children: React.ReactNode }) {
   const { usuario, loading } = useAuth();
@@ -36,6 +38,8 @@ function Rotas() {
         <Route path="/contatos/novo" element={<CadastroContato />} />
         <Route path="/contatos/:id" element={<PerfilContato />} />
         <Route path="/comunicacao" element={<Comunicacao />} />
+        <Route path="/eleitoral" element={<PainelEleitoral />} />
+        <Route path="/auditoria" element={<Auditoria />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

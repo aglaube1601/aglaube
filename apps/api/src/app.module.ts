@@ -39,6 +39,7 @@ import { AuditoriaController } from './auditoria/auditoria.controller';
 import { ComunicacaoService } from './comunicacao/comunicacao.service';
 import { ComunicacaoController } from './comunicacao/comunicacao.controller';
 import { FilaEnvioService } from './comunicacao/fila-envio.service';
+import { EnvioWorker } from './comunicacao/envio.worker';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { FilaEnvioService } from './comunicacao/fila-envio.service';
     AuditoriaService,
     ComunicacaoService,
     FilaEnvioService,
+    EnvioWorker,
   ],
 })
 export class AppModule {}

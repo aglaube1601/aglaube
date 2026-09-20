@@ -26,7 +26,7 @@ describe('ComunicacaoService', () => {
       contato: { findMany: jest.fn() },
       consentimento: { findMany: jest.fn().mockResolvedValue([]) },
       campanhaComunicacao: { create: jest.fn() },
-      envioMensagem: { create: jest.fn() },
+      envioMensagem: { create: jest.fn(), delete: jest.fn() },
     };
     filaEnvio = { enfileirar: jest.fn().mockResolvedValue(undefined) };
 
@@ -157,6 +157,65 @@ describe('ComunicacaoService', () => {
     });
   });
 
+  describe('critério aniversariantes da semana — compara só mês/dia, com virada de ano', () => {
+    // Acessa o método privado direto: é a unidade de regra de negócio
+    // relevante aqui, testar só via buscarDestinatariosElegiveis exigiria
+    // reconstruir a data "hoje" real a cada corrida de teste.
+    function aniversario(dataNascimento: Date, hoje: Date, dias = 7): boolean {
+      return (service as any).aniversarioNosProximosDias(dataNascimento, hoje, dias);
+    }
+
+    it('inclui aniversário HOJE', () => {
+      const hoje = new Date(2026, 8, 20); // 20/set/2026
+      expect(aniversario(new Date(1990, 8, 20), hoje)).toBe(true);
+    });
+
+    it('inclui aniversário exatamente no limite (+7 dias)', () => {
+      const hoje = new Date(2026, 8, 20);
+      expect(aniversario(new Date(1985, 8, 27), hoje)).toBe(true);
+    });
+
+    it('EXCLUI aniversário fora da janela (+8 dias)', () => {
+      const hoje = new Date(2026, 8, 20);
+      expect(aniversario(new Date(1985, 8, 28), hoje)).toBe(false);
+    });
+
+    it('EXCLUI aniversário que já passou (ontem)', () => {
+      const hoje = new Date(2026, 8, 20);
+      expect(aniversario(new Date(1985, 8, 19), hoje)).toBe(false);
+    });
+
+    it('atravessa a virada do ano corretamente (29/dez -> 5/jan)', () => {
+      const hoje = new Date(2026, 11, 29); // 29/dez/2026
+      // 3/jan cai dentro da janela mesmo sendo "ano anterior" no calendário
+      expect(aniversario(new Date(1992, 0, 3), hoje)).toBe(true);
+      // 6/jan já é o 8º dia — fora da janela
+      expect(aniversario(new Date(1992, 0, 6), hoje)).toBe(false);
+    });
+
+    it('buscarDestinatariosElegiveis filtra por mês/dia e aplica consentimento ativo', async () => {
+      const hoje = new Date();
+      const aniversarianteHoje = new Date(1990, hoje.getMonth(), hoje.getDate());
+      const foraDaJanela = new Date(1990, (hoje.getMonth() + 6) % 12, 15);
+
+      prisma.contato.findMany.mockResolvedValue([
+        { id: 'c1', dataNascimento: aniversarianteHoje },
+        { id: 'c2', dataNascimento: foraDaJanela },
+      ]);
+      prisma.consentimento.findMany.mockResolvedValue([{ contatoId: 'c1', status: 'ativo' }]);
+
+      const elegiveis = await service.buscarDestinatariosElegiveis(
+        'municipio-1',
+        CriterioPublico.ANIVERSARIANTES_SEMANA,
+        FinalidadeComunicacao.COMUNICACAO_INSTITUCIONAL,
+      );
+
+      expect(elegiveis).toEqual(['c1']);
+      // dataNascimento: not null precisa estar no where — nunca a base inteira
+      expect(prisma.contato.findMany.mock.calls[0][0].where.dataNascimento).toEqual({ not: null });
+    });
+  });
+
   describe('idempotência de envio', () => {
     it('enfileira um envio por destinatário elegível', async () => {
       prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }]);
@@ -220,6 +279,28 @@ describe('ComunicacaoService', () => {
           usuario,
         ),
       ).rejects.toThrow('conexão com banco perdida');
+    });
+
+    it('desfaz o EnvioMensagem já criado se enfileirar falhar (nunca deixa "pendente" órfão)', async () => {
+      prisma.contato.findMany.mockResolvedValue([{ id: 'c1' }]);
+      prisma.consentimento.findMany.mockResolvedValue([{ contatoId: 'c1', status: 'ativo' }]);
+      prisma.campanhaComunicacao.create.mockResolvedValue({ id: 'camp-1' });
+      prisma.envioMensagem.create.mockResolvedValue({ id: 'envio-1' });
+      filaEnvio.enfileirar.mockRejectedValueOnce(new Error('Redis indisponível'));
+
+      await expect(
+        service.criarCampanha(
+          {
+            tipoTemplate: TipoTemplate.ANIVERSARIO,
+            corpoMensagem: 'Feliz aniversário!',
+            criterioPublico: CriterioPublico.TODOS_COM_CONSENTIMENTO,
+          } as any,
+          'municipio-1',
+          usuario,
+        ),
+      ).rejects.toThrow('Redis indisponível');
+
+      expect(prisma.envioMensagem.delete).toHaveBeenCalledWith({ where: { id: 'envio-1' } });
     });
   });
 });

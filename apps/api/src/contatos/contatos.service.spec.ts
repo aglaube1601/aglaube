@@ -8,7 +8,7 @@
  */
 
 import { Test } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ContatosService, UsuarioAutenticado } from './contatos.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
@@ -34,7 +34,7 @@ describe('ContatosService', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
       $transaction: jest.fn((cb) => cb(prisma)),
       comunidade: { findUnique: jest.fn() },
-      contato: { create: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+      contato: { create: jest.fn(), findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       engajamentoPolitico: { create: jest.fn(), updateMany: jest.fn() },
       logAuditoria: { create: jest.fn() },
     };
@@ -235,6 +235,85 @@ describe('ContatosService', () => {
 
       expect(resultado.tamanhoPagina).toBe(100);
       expect(prisma.contato.findMany.mock.calls[0][0].take).toBe(100);
+    });
+  });
+
+  describe('regra: edição de contato não toca comunidadeId nem engajamentoPolitico', () => {
+    it('rejeita edição de contato inexistente', async () => {
+      prisma.contato.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.atualizar('contato-inexistente', { telefone: '99999-0000' }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prisma.contato.update).not.toHaveBeenCalled();
+    });
+
+    it('atualiza apenas os campos básicos informados', async () => {
+      prisma.contato.findUnique.mockResolvedValue({
+        id: 'contato-1',
+        nome: 'Maria da Silva',
+        telefone: '3333-0000',
+      });
+      prisma.contato.update.mockResolvedValue({
+        id: 'contato-1',
+        nome: 'Maria da Silva',
+        telefone: '3333-0000',
+        endereco: 'Rua Nova, 123',
+        profissao: 'Professora',
+      });
+
+      const resultado = await service.atualizar('contato-1', {
+        endereco: 'Rua Nova, 123',
+        profissao: 'Professora',
+      });
+
+      expect(prisma.contato.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'contato-1' },
+          data: expect.objectContaining({
+            endereco: 'Rua Nova, 123',
+            profissao: 'Professora',
+          }),
+        }),
+      );
+      // Nunca deve tentar mudar comunidadeId por esta rota
+      expect(prisma.contato.update.mock.calls[0][0].data).not.toHaveProperty('comunidadeId');
+      expect(resultado.endereco).toBe('Rua Nova, 123');
+    });
+
+    it('bloqueia edição quando nome/telefone gera duplicata forte com OUTRO contato', async () => {
+      prisma.contato.findUnique.mockResolvedValue({
+        id: 'contato-1',
+        nome: 'Maria da Silva',
+        telefone: '3333-0000',
+      });
+      prisma.$queryRaw.mockResolvedValue([
+        { id: 'contato-2', nome: 'Maria S. Silva', similaridade: 0.75 },
+      ]);
+
+      await expect(
+        service.atualizar('contato-1', { nome: 'Maria da Silva Souza' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.contato.update).not.toHaveBeenCalled();
+    });
+
+    it('não bloqueia edição por "duplicata" que é o próprio contato comparado consigo mesmo', async () => {
+      prisma.contato.findUnique.mockResolvedValue({
+        id: 'contato-1',
+        nome: 'Maria da Silva',
+        telefone: '3333-0000',
+      });
+      prisma.$queryRaw.mockResolvedValue([
+        { id: 'contato-1', nome: 'Maria da Silva', similaridade: 1 },
+      ]);
+      prisma.contato.update.mockResolvedValue({ id: 'contato-1', nome: 'Maria da Silva Souza' });
+
+      const resultado = await service.atualizar('contato-1', { nome: 'Maria da Silva Souza' });
+
+      expect(resultado).toEqual({ id: 'contato-1', nome: 'Maria da Silva Souza' });
+      expect(prisma.contato.update).toHaveBeenCalled();
     });
   });
 });

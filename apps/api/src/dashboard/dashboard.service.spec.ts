@@ -41,7 +41,11 @@ describe('DashboardService', () => {
     prisma.eventoAcao.findMany.mockResolvedValue([
       { id: 'ev-1', tipo: 'reuniao', data: new Date('2027-01-10'), comunidade: { nome: 'Av. Central' } },
     ]);
-    prisma.$queryRaw.mockResolvedValue([{ count: BigInt(3) }]);
+    // Ordem importa: primeira chamada é o COUNT de aniversariantes, segunda
+    // é a série de interações por dia (ver ordem no Promise.all do service).
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ count: BigInt(3) }])
+      .mockResolvedValueOnce([{ dia: '2027-01-05', total: BigInt(2) }]);
   }
 
   it('agrega todos os KPIs corretamente a partir dos módulos existentes', async () => {
@@ -92,7 +96,9 @@ describe('DashboardService', () => {
     prisma.interacao.count.mockResolvedValue(0);
     prisma.demanda.count.mockResolvedValue(0);
     prisma.eventoAcao.findMany.mockResolvedValue([]);
-    prisma.$queryRaw.mockResolvedValue([{ count: BigInt(0) }]);
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ count: BigInt(0) }])
+      .mockResolvedValueOnce([]);
 
     const resumo = await service.obterResumoExecutivo('municipio-vazio');
 
@@ -100,5 +106,38 @@ describe('DashboardService', () => {
     expect(resumo.comunidadesMapeadas).toBe(0);
     expect(resumo.regioesComBaixaCobertura).toEqual([]);
     expect(resumo.aniversariantesDoMes).toBe(0);
+    expect(resumo.contatosPorComunidade).toEqual([]);
+    expect(resumo.interacoesPorDia).toHaveLength(14);
+    expect(resumo.interacoesPorDia.every((d) => d.total === 0)).toBe(true);
+  });
+
+  describe('regra: gráficos do painel são agregação, nunca lista individual', () => {
+    it('rankeia comunidades por contagem de contatos (top 8) para o gráfico de barras', async () => {
+      mockPadrao();
+
+      const resumo = await service.obterResumoExecutivo('municipio-1');
+
+      expect(resumo.contatosPorComunidade).toEqual([
+        { comunidadeId: 'com-1', nome: 'Av. Central', totalContatos: 45 },
+        { comunidadeId: 'com-3', nome: 'Rua Projetada', totalContatos: 9 },
+        { comunidadeId: 'com-2', nome: 'Povoado São João Batista', totalContatos: 4 },
+      ]);
+    });
+
+    it('preenche a série de 14 dias com total=0 nos dias sem interação', async () => {
+      mockPadrao();
+
+      const resumo = await service.obterResumoExecutivo('municipio-1');
+
+      expect(resumo.interacoesPorDia).toHaveLength(14);
+      const comInteracao = resumo.interacoesPorDia.filter((d) => d.total > 0);
+      const semInteracao = resumo.interacoesPorDia.filter((d) => d.total === 0);
+      expect(comInteracao.length + semInteracao.length).toBe(14);
+      // Todo item tem formato de data ISO (YYYY-MM-DD) e total numérico
+      resumo.interacoesPorDia.forEach((d) => {
+        expect(d.dia).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(typeof d.total).toBe('number');
+      });
+    });
   });
 });

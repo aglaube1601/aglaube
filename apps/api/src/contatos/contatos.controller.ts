@@ -17,6 +17,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -25,7 +26,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard, PerfilUsuario } from '../auth/roles.guard';
 import { ContatosService, UsuarioAutenticado } from './contatos.service';
-import { CreateContatoDto, EngajamentoPoliticoInputDto } from './dto/create-contato.dto';
+import { CreateContatoDto, EngajamentoPoliticoInputDto, UpdateContatoDto } from './dto/create-contato.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -98,6 +99,21 @@ export class ContatosController {
     @CurrentUser() usuario: UsuarioAutenticado,
   ) {
     return this.contatosService.criar(dto, usuario);
+  }
+
+  // Edição dos campos básicos — mesmos perfis que podem cadastrar. Não
+  // aceita comunidadeId nem engajamentoPolitico (ver UpdateContatoDto).
+  @Patch(':id')
+  @Roles(
+    PerfilUsuario.ADMINISTRADOR,
+    PerfilUsuario.COORDENADOR,
+    PerfilUsuario.OPERADOR,
+  )
+  async atualizar(
+    @Param('id') id: string,
+    @Body() dto: UpdateContatoDto,
+  ) {
+    return this.contatosService.atualizar(id, dto);
   }
 
   // Engajamento político tem rota PRÓPRIA, separada do CRUD comum de

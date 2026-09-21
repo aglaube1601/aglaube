@@ -32,8 +32,17 @@ export interface ResumoExecutivo {
   demandasResolvidas30Dias: number;
   proximosEventos: Array<{ id: string; tipo: string; data: Date; comunidadeNome: string }>;
   aniversariantesDoMes: number; // contagem — nunca lista de nomes neste endpoint
+  // Ranking agregado (contagem por comunidade) — usado no gráfico de barras
+  // do painel. Continua sendo uma AGREGAÇÃO, não uma lista de Contato.
+  contatosPorComunidade: Array<{ comunidadeId: string; nome: string; totalContatos: number }>;
+  // Série temporal (contagem por dia) para o gráfico de tendência do
+  // painel — 14 dias, dias sem interação entram com total 0.
+  interacoesPorDia: Array<{ dia: string; total: number }>;
   geradoEm: Date;
 }
+
+const DIAS_SERIE_INTERACOES = 14;
+const TOP_COMUNIDADES_GRAFICO = 8;
 
 @Injectable()
 export class DashboardService {
@@ -62,6 +71,7 @@ export class DashboardService {
       demandasResolvidas30Dias,
       proximosEventosRaw,
       aniversariantesDoMes,
+      interacoesPorDiaRaw,
     ] = await Promise.all([
       this.prisma.contato.count({ where: filtroTerritorioContato }),
 
@@ -121,6 +131,26 @@ export class DashboardService {
           AND c."dataNascimento" IS NOT NULL
           AND EXTRACT(MONTH FROM c."dataNascimento") = ${agora.getMonth() + 1}
       `.then((r) => Number(r[0]?.count ?? 0)),
+
+      // Interações agrupadas por dia — base do gráfico de tendência do
+      // painel. Traz só os dias com pelo menos uma interação; os dias sem
+      // nenhuma são preenchidos com total=0 depois (ver preencherDiasVazios),
+      // porque um LEFT JOIN com generate_series complicaria a query sem
+      // necessidade.
+      this.prisma.$queryRaw<Array<{ dia: string; total: bigint }>>`
+        SELECT
+          to_char(date_trunc('day', i."data"), 'YYYY-MM-DD') as dia,
+          COUNT(*)::bigint as total
+        FROM "Interacao" i
+        JOIN "Contato" c ON c.id = i."contatoId"
+        JOIN "Comunidade" com ON com.id = c."comunidadeId"
+        JOIN "Bairro" b ON b.id = com."bairroId"
+        JOIN "ZonaEleitoral" z ON z.id = b."zonaEleitoralId"
+        WHERE z."municipioId" = ${municipioId}
+          AND i."data" >= ${new Date(agora.getTime() - (DIAS_SERIE_INTERACOES - 1) * 24 * 60 * 60 * 1000)}
+        GROUP BY dia
+        ORDER BY dia ASC
+      `,
     ]);
 
     const regioesComBaixaCobertura = comunidades
@@ -134,6 +164,13 @@ export class DashboardService {
       comunidadeNome: e.comunidade.nome,
     }));
 
+    const contatosPorComunidade = [...comunidades]
+      .sort((a, b) => b._count.contatos - a._count.contatos)
+      .slice(0, TOP_COMUNIDADES_GRAFICO)
+      .map((c) => ({ comunidadeId: c.id, nome: c.nome, totalContatos: c._count.contatos }));
+
+    const interacoesPorDia = this.preencherDiasVazios(interacoesPorDiaRaw, agora);
+
     return {
       totalContatos,
       novosContatos30Dias,
@@ -145,8 +182,30 @@ export class DashboardService {
       demandasResolvidas30Dias,
       proximosEventos,
       aniversariantesDoMes,
+      contatosPorComunidade,
+      interacoesPorDia,
       geradoEm: agora,
     };
+  }
+
+  /**
+   * Completa a série de 14 dias com total=0 nos dias sem nenhuma
+   * interação — sem isso o gráfico de tendência "pularia" dias, o que
+   * é enganoso num gráfico de linha (parece que o dia não existiu, não
+   * que teve zero interações).
+   */
+  private preencherDiasVazios(
+    linhas: Array<{ dia: string; total: bigint }>,
+    agora: Date,
+  ): Array<{ dia: string; total: number }> {
+    const porDia = new Map(linhas.map((l) => [l.dia, Number(l.total)]));
+    const dias: Array<{ dia: string; total: number }> = [];
+    for (let i = DIAS_SERIE_INTERACOES - 1; i >= 0; i--) {
+      const data = new Date(agora.getTime() - i * 24 * 60 * 60 * 1000);
+      const chave = data.toISOString().slice(0, 10);
+      dias.push({ dia: chave, total: porDia.get(chave) ?? 0 });
+    }
+    return dias;
   }
 
   private async contarInteracoes30Dias(municipioId: string, desde: Date): Promise<number> {

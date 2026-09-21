@@ -46,6 +46,10 @@ a {
   color: inherit;
 }
 
+/* Mobile-first: app-shell é uma coluna de largura fixa tipo "tira de
+   celular". A partir do breakpoint de desktop, vira layout de largura
+   total com topbar + sidebar de navegação fixa (ver .body-layout /
+   .sidebar-nav abaixo) — bottom-nav sai, sidebar entra. */
 .app-shell {
   max-width: 480px;
   margin: 0 auto;
@@ -81,6 +85,13 @@ a {
   opacity: 0.85;
   font-size: 12px;
   cursor: pointer;
+}
+
+.body-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .screen {
@@ -120,6 +131,75 @@ a {
 .bottom-nav a.active {
   color: var(--teal);
   background: var(--teal-light);
+}
+
+.sidebar-nav {
+  display: none;
+}
+
+/* Desktop/tablet-largo: solta a largura fixa de 480px, entra o layout de
+   sidebar. 860px cobre a maioria dos laptops sem cortar em tablets em
+   modo retrato. */
+@media (min-width: 860px) {
+  .app-shell {
+    max-width: none;
+    margin: 0;
+  }
+
+  .body-layout {
+    flex-direction: row;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 9px;
+  }
+
+  .sidebar-nav a:hover {
+    background: var(--paper);
+  }
+
+  .sidebar-nav a.active {
+    color: var(--teal);
+    background: var(--teal-light);
+  }
+
+  .sidebar-nav a .nav-icon {
+    font-size: 16px;
+  }
+
+  .screen {
+    padding-bottom: 32px;
+  }
+
+  .screen-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
 }
 
 .card {
@@ -229,8 +309,15 @@ a {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+}
+
+@media (min-width: 860px) {
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
 }
 
 .kpi-card {
@@ -251,6 +338,19 @@ a {
   font-size: 10.5px;
   color: var(--muted);
   font-weight: 600;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 860px) {
+  .chart-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 14px;
+  }
 }
 
 .section-title {

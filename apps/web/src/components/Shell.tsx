@@ -28,8 +28,26 @@ export function Shell() {
         <button onClick={logout}>Sair</button>
       </div>
 
-      <div className="screen">
-        <Outlet />
+      <div className="body-layout">
+        <nav className="sidebar-nav">
+          {tabsVisiveis.map((tab) => (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.end}
+              className={({ isActive }) => (isActive ? 'active' : '')}
+            >
+              <span className="nav-icon">{tab.icon}</span>
+              {tab.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="screen">
+          <div className="screen-inner">
+            <Outlet />
+          </div>
+        </div>
       </div>
 
       <nav className="bottom-nav">

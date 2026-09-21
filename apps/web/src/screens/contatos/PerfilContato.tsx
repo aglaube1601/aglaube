@@ -35,6 +35,14 @@ interface ConsentimentoAtual {
   data: string;
 }
 
+interface CandidatoDuplicata {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  comunidadeNome: string;
+  similaridade: number;
+}
+
 const FINALIDADE_PADRAO = 'comunicacao_institucional';
 
 const OPCOES_CONSENTIMENTO = [
@@ -74,6 +82,72 @@ export function PerfilContato() {
   const [descricaoDemanda, setDescricaoDemanda] = useState('');
   const [salvandoDemanda, setSalvandoDemanda] = useState(false);
   const [demandaCriada, setDemandaCriada] = useState(false);
+
+  const [editando, setEditando] = useState(false);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [erroEdicao, setErroEdicao] = useState<string | null>(null);
+  const [duplicatasEdicao, setDuplicatasEdicao] = useState<CandidatoDuplicata[] | null>(null);
+  const [formEdicao, setFormEdicao] = useState({
+    nome: '',
+    telefone: '',
+    whatsapp: '',
+    dataNascimento: '',
+    endereco: '',
+    profissao: '',
+  });
+
+  function iniciarEdicao() {
+    if (!contato) return;
+    setFormEdicao({
+      nome: contato.nome,
+      telefone: contato.telefone ?? '',
+      whatsapp: contato.whatsapp ?? '',
+      dataNascimento: contato.dataNascimento ? contato.dataNascimento.slice(0, 10) : '',
+      endereco: contato.endereco ?? '',
+      profissao: contato.profissao ?? '',
+    });
+    setErroEdicao(null);
+    setDuplicatasEdicao(null);
+    setEditando(true);
+  }
+
+  async function salvarEdicao(ignorarDuplicatasIds?: string[]) {
+    if (!id) return;
+    setSalvandoEdicao(true);
+    setErroEdicao(null);
+    try {
+      await api.patch(`/contatos/${id}`, {
+        nome: formEdicao.nome || undefined,
+        telefone: formEdicao.telefone || undefined,
+        whatsapp: formEdicao.whatsapp || undefined,
+        dataNascimento: formEdicao.dataNascimento || undefined,
+        endereco: formEdicao.endereco || undefined,
+        profissao: formEdicao.profissao || undefined,
+        ignorarDuplicatasIds,
+      });
+      setEditando(false);
+      setDuplicatasEdicao(null);
+      carregar();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400) {
+        const payload = e.payload as { candidatos?: CandidatoDuplicata[] } | undefined;
+        if (payload?.candidatos?.length) {
+          setDuplicatasEdicao(payload.candidatos);
+          return;
+        }
+      }
+      setErroEdicao(e instanceof ApiError ? e.message : 'Falha ao salvar alterações.');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  }
+
+  function confirmarPessoaDiferenteEdicao() {
+    if (!duplicatasEdicao) return;
+    const ids = duplicatasEdicao.map((d) => d.id);
+    setDuplicatasEdicao(null);
+    salvarEdicao(ids);
+  }
 
   function carregar() {
     if (!id) return;
@@ -189,9 +263,119 @@ export function PerfilContato() {
 
       <div style={{ padding: 16 }}>
         <div className="card" style={{ marginBottom: 12 }}>
-          <Row label={contato.telefone ?? 'sem telefone'} />
-          <Row label={contato.endereco ?? 'sem endereço'} />
-          <Row label={contato.profissao ?? 'sem profissão informada'} last />
+          {!editando ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700 }}>Dados de contato</p>
+                <button
+                  onClick={iniciarEdicao}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--teal)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  ✎ Editar
+                </button>
+              </div>
+              <Row label={contato.telefone ?? 'sem telefone'} />
+              <Row label={contato.whatsapp ?? 'sem whatsapp'} />
+              <Row
+                label={
+                  contato.dataNascimento
+                    ? new Date(contato.dataNascimento).toLocaleDateString('pt-BR')
+                    : 'sem data de nascimento'
+                }
+              />
+              <Row label={contato.endereco ?? 'sem endereço'} />
+              <Row label={contato.profissao ?? 'sem profissão informada'} last />
+            </>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                salvarEdicao();
+              }}
+            >
+              <p style={{ margin: '0 0 10px', fontSize: 12.5, fontWeight: 700 }}>Editar dados de contato</p>
+              {erroEdicao && <div className="alert alert-error" style={{ marginBottom: 10 }}>{erroEdicao}</div>}
+              {duplicatasEdicao && duplicatasEdicao.length > 0 && (
+                <div className="alert alert-amber" style={{ marginBottom: 10 }}>
+                  <p style={{ margin: '0 0 6px' }}>Encontramos um contato parecido:</p>
+                  {duplicatasEdicao.map((d) => (
+                    <p key={d.id} style={{ margin: '0 0 2px', fontSize: 12 }}>
+                      {d.nome} — {d.comunidadeNome} {d.telefone ? `· ${d.telefone}` : ''}
+                    </p>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ marginTop: 8 }}
+                    onClick={confirmarPessoaDiferenteEdicao}
+                    disabled={salvandoEdicao}
+                  >
+                    É pessoa diferente, salvar mesmo assim
+                  </button>
+                </div>
+              )}
+              <div className="field">
+                <label>Nome</label>
+                <input
+                  value={formEdicao.nome}
+                  onChange={(e) => setFormEdicao((f) => ({ ...f, nome: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label>Telefone</label>
+                <input
+                  value={formEdicao.telefone}
+                  onChange={(e) => setFormEdicao((f) => ({ ...f, telefone: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label>WhatsApp</label>
+                <input
+                  value={formEdicao.whatsapp}
+                  onChange={(e) => setFormEdicao((f) => ({ ...f, whatsapp: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label>Data de nascimento</label>
+                <input
+                  type="date"
+                  value={formEdicao.dataNascimento}
+                  onChange={(e) => setFormEdicao((f) => ({ ...f, dataNascimento: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label>Endereço</label>
+                <input
+                  value={formEdicao.endereco}
+                  onChange={(e) => setFormEdicao((f) => ({ ...f, endereco: e.target.value }))}
+                />
+              </div>
+              <div className="field" style={{ marginBottom: 10 }}>
+                <label>Profissão</label>
+                <input
+                  value={formEdicao.profissao}
+                  onChange={(e) => setFormEdicao((f) => ({ ...f, profissao: e.target.value }))}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" disabled={salvandoEdicao || !formEdicao.nome.trim()}>
+                  {salvandoEdicao ? 'Salvando…' : 'Salvar alterações'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setEditando(false);
+                    setDuplicatasEdicao(null);
+                    setErroEdicao(null);
+                  }}
+                  disabled={salvandoEdicao}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         <div className="card" style={{ marginBottom: 12 }}>

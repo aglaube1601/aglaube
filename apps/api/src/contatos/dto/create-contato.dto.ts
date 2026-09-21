@@ -94,3 +94,49 @@ export class CreateContatoDto {
   @IsOptional()
   ignorarDuplicatasIds?: string[];
 }
+
+/**
+ * UpdateContatoDto — edição dos campos básicos de um contato já cadastrado.
+ *
+ * Propositalmente NÃO inclui comunidadeId nem engajamentoPolitico:
+ * - comunidadeId: trocar o território de um contato via edição genérica
+ *   contorna a territorialização do sistema sem passar pelas mesmas
+ *   checagens de criação; se isso virar necessário, deve ser uma rota
+ *   própria e auditada, igual ao engajamento.
+ * - engajamentoPolitico: já tem rota própria (PUT /:id/engajamento) com
+ *   RBAC mais restrito e histórico versionado — não pode ser editado por
+ *   aqui.
+ * Todos os campos são opcionais porque uma edição pode tocar só um deles
+ * (ex.: só telefone).
+ */
+export class UpdateContatoDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  nome?: string;
+
+  @IsOptional()
+  @IsString()
+  telefone?: string;
+
+  @IsOptional()
+  @IsString()
+  whatsapp?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataNascimento?: string;
+
+  @IsOptional()
+  @IsString()
+  endereco?: string;
+
+  @IsOptional()
+  @IsString()
+  profissao?: string;
+
+  // Mesmo uso do campo de mesmo nome em CreateContatoDto — confirma que o
+  // candidato apontado pela checagem de dedup é pessoa diferente.
+  @IsOptional()
+  ignorarDuplicatasIds?: string[];
+}

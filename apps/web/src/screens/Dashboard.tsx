@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { ChartCard } from '../components/charts/ChartCard';
+import { BarChart } from '../components/charts/BarChart';
+import { LineChart } from '../components/charts/LineChart';
+import { StatusCompare } from '../components/charts/StatusCompare';
 
 interface ResumoExecutivo {
   totalContatos: number;
@@ -13,6 +17,8 @@ interface ResumoExecutivo {
   demandasResolvidas30Dias: number;
   proximosEventos: Array<{ id: string; tipo: string; data: string; comunidadeNome: string }>;
   aniversariantesDoMes: number;
+  contatosPorComunidade: Array<{ comunidadeId: string; nome: string; totalContatos: number }>;
+  interacoesPorDia: Array<{ dia: string; total: number }>;
   geradoEm: string;
 }
 
@@ -32,17 +38,64 @@ export function Dashboard() {
   if (erro) return <div className="alert alert-error" style={{ margin: 16 }}>{erro}</div>;
   if (!dados) return <div className="spinner">Carregando painel…</div>;
 
+  const seriePorDia = dados.interacoesPorDia.map((d) => ({
+    label: new Date(`${d.dia}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+    value: d.total,
+  }));
+
+  const rankingComunidades = dados.contatosPorComunidade.map((c) => ({
+    label: c.nome,
+    value: c.totalContatos,
+  }));
+
   return (
     <div style={{ padding: 16 }}>
-      <div className="kpi-grid">
+      <div className="kpi-grid" style={{ marginBottom: 16 }}>
         <Kpi label="Contatos cadastrados" value={dados.totalContatos} />
         <Kpi label="Novos em 30 dias" value={dados.novosContatos30Dias} />
         <Kpi label="Lideranças" value={dados.liderancasCadastradas} />
         <Kpi label="Comunidades mapeadas" value={dados.comunidadesMapeadas} />
         <Kpi label="Interações em 30 dias" value={dados.interacoes30Dias} />
         <Kpi label="Aniversariantes do mês" value={dados.aniversariantesDoMes} />
-        <Kpi label="Demandas abertas" value={dados.demandasAbertas} accent="amber" />
-        <Kpi label="Demandas resolvidas (30d)" value={dados.demandasResolvidas30Dias} accent="green" />
+      </div>
+
+      <div className="chart-grid">
+        {rankingComunidades.length > 0 && (
+          <ChartCard
+            title="Contatos por comunidade"
+            subtitle={`Top ${rankingComunidades.length} comunidades cadastradas`}
+            tableHeaders={['Comunidade', 'Contatos']}
+            tableRows={rankingComunidades.map((c) => [c.label, c.value])}
+          >
+            <BarChart data={rankingComunidades} />
+          </ChartCard>
+        )}
+
+        <ChartCard
+          title="Interações nos últimos 14 dias"
+          subtitle="Ligações, mensagens, visitas e reuniões registradas"
+          tableHeaders={['Dia', 'Interações']}
+          tableRows={seriePorDia.map((d) => [d.label, d.value])}
+        >
+          <LineChart data={seriePorDia} />
+        </ChartCard>
+
+        <ChartCard
+          title="Demandas"
+          subtitle="Abertas agora × resolvidas nos últimos 30 dias"
+          tableHeaders={['Status', 'Quantidade']}
+          tableRows={[
+            ['Abertas', dados.demandasAbertas],
+            ['Resolvidas (30d)', dados.demandasResolvidas30Dias],
+          ]}
+        >
+          <StatusCompare
+            items={[
+              { label: 'Abertas', value: dados.demandasAbertas, color: 'var(--amber)' },
+              { label: 'Resolvidas (30d)', value: dados.demandasResolvidas30Dias, color: 'var(--veryhigh)' },
+            ]}
+          />
+        </ChartCard>
       </div>
 
       {dados.regioesComBaixaCobertura.length > 0 && (

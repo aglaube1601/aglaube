@@ -15,7 +15,7 @@
 
 import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateContatoDto } from './dto/create-contato.dto';
+import { CreateContatoDto, UpdateContatoDto } from './dto/create-contato.dto';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 
 export interface UsuarioAutenticado {
@@ -266,6 +266,64 @@ export class ContatosService {
     });
 
     return contato;
+  }
+
+  /**
+   * Edita os campos básicos (não-sensíveis) de um contato já cadastrado.
+   * Não mexe em comunidadeId nem engajamentoPolitico — ver docstring de
+   * UpdateContatoDto. Passa pela mesma checagem de duplicata forte só
+   * quando nome ou telefone mudam, pra não travar edição de endereço/
+   * profissão por causa de um "duplicado" que na real é o próprio contato
+   * comparado com ele mesmo (por isso o contatoId atual é sempre excluído
+   * da lista de candidatos).
+   */
+  async atualizar(contatoId: string, dto: UpdateContatoDto): Promise<ContatoDetalhado> {
+    const existente = await this.prisma.contato.findUnique({ where: { id: contatoId } });
+    if (!existente) {
+      throw new NotFoundException('Contato não encontrado.');
+    }
+
+    if (dto.nome !== undefined || dto.telefone !== undefined) {
+      const nome = dto.nome ?? existente.nome;
+      const telefone = dto.telefone ?? existente.telefone ?? undefined;
+      const duplicatas = (await this.buscarPossiveisDuplicatas(nome, telefone)).filter(
+        (d) => d.id !== contatoId,
+      );
+      const naoRevisadas = duplicatas.filter((d) => !dto.ignorarDuplicatasIds?.includes(d.id));
+      const duplicataForte = naoRevisadas.find((d) => d.similaridade > 0.6);
+      if (duplicataForte) {
+        throw new BadRequestException({
+          message: 'Possível contato duplicado encontrado. Revise antes de salvar.',
+          candidatos: naoRevisadas,
+        });
+      }
+    }
+
+    const atualizado = await this.prisma.contato.update({
+      where: { id: contatoId },
+      data: {
+        nome: dto.nome,
+        telefone: dto.telefone,
+        whatsapp: dto.whatsapp,
+        dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+        endereco: dto.endereco,
+        profissao: dto.profissao,
+      },
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        whatsapp: true,
+        dataNascimento: true,
+        endereco: true,
+        profissao: true,
+        comunidadeId: true,
+        comunidade: { select: { id: true, nome: true } },
+        criadoEm: true,
+      },
+    });
+
+    return atualizado;
   }
 
   /**

@@ -20,6 +20,12 @@ Recomendo:
 - **Hostinger** — plano **VPS** (não confundir com "Hospedagem de
   Sites", que não dá root/Docker). Aceita Pix/boleto, o que evita cartão
   internacional. Escolha um plano com pelo menos 4GB RAM.
+- **HostGator** — mesma ideia, também aceita Pix/boleto. Atenção: os
+  planos de VPS deles costumam vir com **cPanel/WHM** por padrão, que
+  sozinho já consome uma fatia de RAM rodando o painel. Se tiver opção de
+  VPS **sem painel de controle**, prefira essa; se só tiver com cPanel,
+  escolha um plano com mais RAM (6-8GB) pra sobrar espaço de verdade pra
+  Postgres/Redis/API/frontend.
 - **Hetzner Cloud** — mais barato (plano CX22: 2 vCPU / 4GB RAM / 40GB
   disco, ~€4,35/mês ≈ R$25/mês). Sem datacenter no Brasil (mais perto:
   EUA), mas ótimo custo-benefício. Só cartão internacional.

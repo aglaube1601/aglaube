@@ -13,19 +13,25 @@ pra você (ou quem tiver acesso ao servidor) rodar.
 
 ## 1. Criar o servidor
 
-Qualquer provedor de VPS serve. Recomendo:
+Qualquer provedor de VPS serve — o script não depende de nada específico
+de um provedor, só precisa de uma VM comum com Ubuntu e root via SSH.
+Recomendo:
 
+- **Hostinger** — plano **VPS** (não confundir com "Hospedagem de
+  Sites", que não dá root/Docker). Aceita Pix/boleto, o que evita cartão
+  internacional. Escolha um plano com pelo menos 4GB RAM.
 - **Hetzner Cloud** — mais barato (plano CX22: 2 vCPU / 4GB RAM / 40GB
   disco, ~€4,35/mês ≈ R$25/mês). Sem datacenter no Brasil (mais perto:
-  EUA), mas ótimo custo-benefício.
+  EUA), mas ótimo custo-benefício. Só cartão internacional.
 - **DigitalOcean** — mais caro pela mesma config (~$12/mês ≈ R$65/mês),
   mas interface mais simples e muita documentação em português na
-  comunidade.
+  comunidade. Só cartão internacional.
 
 Na criação, escolha:
 - **Imagem/SO**: Ubuntu 24.04 LTS
-- **Tamanho**: pelo menos 2GB RAM (Postgres + Redis + API + build do
-  frontend juntos precisam de folga — 1GB é arriscado)
+- **Tamanho**: pelo menos 2GB RAM, de preferência 4GB (Postgres + Redis +
+  API + build do frontend juntos precisam de folga — 1GB é arriscado)
+- **Datacenter**: se tiver opção no Brasil, prefira essa (menor latência)
 - **Autenticação**: SSH key (mais seguro) ou senha root, como preferir
 
 Ao final, você tem um **IP público** (ex: `203.0.113.10`) e acesso root

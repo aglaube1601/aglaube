@@ -1,13 +1,13 @@
 # Deploy num servidor só (VPS)
 
-Um único servidor, um único cadastro, um script que sobe tudo (Postgres,
-Redis, API e frontend) via Docker Compose. Sem domínio, sem HTTPS — acesso
+Um único servidor, um único cadastro. Sem domínio, sem HTTPS — acesso
 direto por IP (ver limitações no fim). Bom pra teste com o time; pra
 produção de verdade, precisa de mais (HTTPS, backup automático, etc).
 
-**Importante**: eu não consigo configurar o servidor remotamente — este
-ambiente aqui não tem acesso de saída por SSH (testei). Os passos abaixo
-são pra você (ou quem tiver acesso ao servidor) rodar.
+**Importante**: eu não consigo criar o servidor nem configurá-lo
+remotamente — este ambiente aqui não tem acesso de saída por SSH nem
+pelas APIs dos provedores de nuvem (testei os dois). Os passos abaixo são
+pra você (ou quem tiver acesso ao servidor) rodar.
 
 ---
 
@@ -31,64 +31,81 @@ Na criação, escolha:
 Ao final, você tem um **IP público** (ex: `203.0.113.10`) e acesso root
 via SSH.
 
-## 2. Entrar no servidor e clonar o projeto
+## 2. Entrar no servidor e rodar UM comando
 
 ```bash
 ssh root@SEU-IP
-
-apt-get update && apt-get install -y git
-git clone https://github.com/aglaube1601/aglaube.git
-cd aglaube
-git checkout claude/new-session-3t2571   # ou a branch/main que vocês usarem
 ```
 
-## 3. Configurar as variáveis de ambiente
+Já dentro do servidor, cole (trocando só o e-mail):
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/aglaube1601/aglaube/claude/new-session-3t2571/deploy/quickstart.sh \
+  | bash -s -- seu-email@exemplo.com
+```
+
+Isso, sozinho:
+1. instala Docker (se não tiver);
+2. clona o projeto em `/opt/aglaube`;
+3. gera senhas fortes aleatórias e detecta o IP público do servidor
+   sozinho — **nenhum arquivo pra editar**;
+4. builda e sobe os 4 containers (Postgres, Redis, API, frontend);
+5. carrega o dado real de Vila Nova do Piauí e cria o Administrador.
+
+Demora uns 5-10 minutos na primeira vez (build das imagens). No final,
+ele imprime a URL do site e **a senha do Administrador — aparece só essa
+vez, anote antes de fechar o terminal.**
+
+Abra `http://SEU-IP` no navegador e faça login com o e-mail que você
+passou + a senha impressa.
+
+### Se o branch já tiver virado `main`
+
+O comando acima aponta pro branch `claude/new-session-3t2571`. Se o
+projeto já tiver mergeado isso na `main`, troque a URL do raw.githubusercontent
+pra apontar `main` no lugar do nome do branch (ou defina
+`AGLAUBE_BRANCH=main` antes do `curl`, ex:
+`AGLAUBE_BRANCH=main curl -fsSL ... | bash -s -- seu-email@exemplo.com`).
+
+## 3. Abrir as portas no firewall (se o provedor tiver um)
+
+Hetzner e DigitalOcean costumam ter um firewall de rede separado do
+Ubuntu. Libere entrada nas portas **80** (frontend) e **3000** (API) —
+elas já saem publicadas pelo Docker Compose.
+
+---
+
+## Opção B — controlando as senhas você mesmo
+
+Se preferir escolher as senhas/URLs em vez do script gerar sozinho:
+
+```bash
+git clone https://github.com/aglaube1601/aglaube.git /opt/aglaube
+cd /opt/aglaube
+git checkout claude/new-session-3t2571
+
 cp .env.prod.example .env.prod
-nano .env.prod   # ou vim, o que tiver
-```
+nano .env.prod   # preencha POSTGRES_PASSWORD, JWT_SECRET, PUBLIC_API_URL,
+                  # PUBLIC_WEB_URL, ADMIN_BOOTSTRAP_EMAIL/SENHA
 
-Preencha:
-- `POSTGRES_PASSWORD` — senha forte (ex: `openssl rand -hex 24`)
-- `JWT_SECRET` — segredo forte (ex: `openssl rand -hex 32`)
-- `PUBLIC_API_URL` → `http://SEU-IP:3000` (troque `SEU-IP` pelo IP real)
-- `PUBLIC_WEB_URL` → `http://SEU-IP`
-- `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_SENHA` — só pra criar o
-  primeiro usuário Administrador
-
-## 4. Rodar o setup
-
-```bash
 chmod +x deploy/vps-setup.sh
 ./deploy/vps-setup.sh --seed
 ```
 
-Isso instala o Docker (se não tiver), builda as imagens (leva alguns
-minutos na primeira vez), sobe os 4 containers, espera a API responder, e
-com `--seed` já carrega o dado real de Vila Nova do Piauí e cria o
-Administrador.
-
-Ao final o script mostra as duas URLs. Abra `http://SEU-IP` no navegador,
-faça login com o e-mail/senha do `.env.prod`.
-
-## 5. Abrir as portas no firewall (se o provedor tiver um)
-
-Hetzner e DigitalOcean costumam ter um firewall de rede separado do
-Ubuntu. Libere entrada nas portas **80** (frontend) e **3000** (API) —
-elas já saem publicadas no `docker-compose.prod.yml`. Se preferir travar
-mais, dá pra deixar só a 80 aberta e mudar `PUBLIC_API_URL` pra um
-caminho atrás de um proxy — mas isso é além do escopo deste guia rápido.
+Mesmo resultado do comando único — só que aqui você escolhe cada valor em
+vez do script gerar sozinho.
 
 ---
 
 ## Depois do primeiro deploy
 
-- **Atualizar o código**: `git pull && ./deploy/vps-setup.sh` (sem
-  `--seed` — isso recriaria o dado). Rebuilda e reinicia os containers
-  com o código novo, sem mexer no banco.
+- **Atualizar o código**: rode o mesmo comando `curl ... | bash -s --
+  seu-email@exemplo.com` de novo (o script detecta que já existe
+  instalação e só faz `git pull` + rebuild — não reseeda, não recria
+  admin). Ou, se preferir manual: `cd /opt/aglaube && git pull &&
+  ./deploy/vps-setup.sh` (sem `--seed`).
 - **Ver logs**: `docker compose -f docker-compose.prod.yml logs -f api`
-  (ou `web`, `postgres`, `redis`).
+  (ou `web`, `postgres`, `redis`) dentro de `/opt/aglaube`.
 - **Trocar a senha do admin**: pelo próprio app, ou recriando o usuário.
 
 ## Limitações desse setup (é pra teste, não produção)

@@ -15,6 +15,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { JwtStrategy } from './auth/jwt-auth.guard';
 import { AuthService } from './auth/auth.service';
 import { AuthController, UsuariosController } from './auth/auth.controller';
+import { HealthController } from './health.controller';
 
 import { ContatosService } from './contatos/contatos.service';
 import { ContatosController } from './contatos/contatos.controller';
@@ -50,6 +51,7 @@ import { EnvioWorker } from './comunicacao/envio.worker';
     }),
   ],
   controllers: [
+    HealthController,
     AuthController,
     UsuariosController,
     ContatosController,

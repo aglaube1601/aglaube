@@ -9,6 +9,13 @@
 # de build não importa pra um deploy de teste gratuito.
 
 FROM node:22-slim AS base
+# node:22-slim não vem com OpenSSL — o engine do Prisma (usado tanto no
+# `prisma generate` do build quanto no `prisma migrate deploy` do boot)
+# depende dele pra detectar a versão certa do binário e falha sem isso
+# ("Schema engine error" / "Please manually install OpenSSL"). Fica aqui
+# no stage base pra cobrir generate (stage build) e migrate (stage
+# runtime) com o mesmo ambiente.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 
 FROM base AS deps

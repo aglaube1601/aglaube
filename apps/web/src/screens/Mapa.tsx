@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+
+interface LiderancaResumo {
+  id: string;
+  contatoId: string;
+  nome: string;
+  telefone: string | null;
+  comunidadeNome: string;
+  grupo: string | null;
+  criadoEm: string;
+}
 
 interface EngajamentoAgregado {
   apoiador: number;
@@ -52,10 +63,12 @@ function corPorFaixa(v: number, max: number): string {
 
 export function Mapa() {
   const { municipio } = useAuth();
+  const navigate = useNavigate();
   const [territorios, setTerritorios] = useState<TerritorioMapa[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [metrica, setMetrica] = useState<Metrica>('contatos');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
+  const [liderancasComunidade, setLiderancasComunidade] = useState<LiderancaResumo[] | null>(null);
 
   useEffect(() => {
     if (!municipio) return;
@@ -82,6 +95,17 @@ export function Mapa() {
   );
 
   const selecionado = territorios?.find((t) => t.comunidadeId === selecionadoId) ?? null;
+
+  useEffect(() => {
+    if (!municipio || !selecionadoId) {
+      setLiderancasComunidade(null);
+      return;
+    }
+    api
+      .get<LiderancaResumo[]>('/liderancas', { municipioId: municipio.id, comunidadeId: selecionadoId })
+      .then(setLiderancasComunidade)
+      .catch(() => setLiderancasComunidade(null));
+  }, [municipio, selecionadoId]);
 
   if (erro) return <div className="alert alert-error" style={{ margin: 16 }}>{erro}</div>;
   if (!territorios) return <div className="spinner">Carregando mapa…</div>;
@@ -178,6 +202,33 @@ export function Mapa() {
             <MiniStat label="demandas abertas" value={selecionado.demandasAbertas} />
             <MiniStat label="lideranças ativas" value={selecionado.liderancasAtivas} />
           </div>
+
+          <p className="section-title">Lideranças cadastradas</p>
+          {liderancasComunidade === null ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>Carregando…</p>
+          ) : liderancasComunidade.length === 0 ? (
+            <div className="alert alert-amber">
+              Nenhuma liderança cadastrada nesta comunidade ainda. Abra o perfil de um
+              contato e use "Marcar como liderança".
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {liderancasComunidade.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => navigate(`/contatos/${l.contatoId}`)}
+                  className="card"
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <span>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, display: 'block' }}>{l.nome}</span>
+                    {l.grupo && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{l.grupo}</span>}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--teal)' }}>Ver perfil →</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <p className="section-title">Engajamento agregado</p>
           {selecionado.engajamentoAgregado ? (

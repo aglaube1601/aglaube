@@ -41,6 +41,7 @@ import { ComunicacaoService } from './comunicacao/comunicacao.service';
 import { ComunicacaoController } from './comunicacao/comunicacao.controller';
 import { FilaEnvioService } from './comunicacao/fila-envio.service';
 import { EnvioWorker } from './comunicacao/envio.worker';
+import { LiderancasService, LiderancaController, LiderancasController } from './liderancas/liderancas.controller';
 
 @Module({
   imports: [
@@ -65,6 +66,8 @@ import { EnvioWorker } from './comunicacao/envio.worker';
     ElectoralProjectionController,
     AuditoriaController,
     ComunicacaoController,
+    LiderancaController,
+    LiderancasController,
   ],
   providers: [
     PrismaService,
@@ -83,6 +86,7 @@ import { EnvioWorker } from './comunicacao/envio.worker';
     ComunicacaoService,
     FilaEnvioService,
     EnvioWorker,
+    LiderancasService,
   ],
 })
 export class AppModule {}

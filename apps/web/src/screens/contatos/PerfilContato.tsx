@@ -35,6 +35,11 @@ interface ConsentimentoAtual {
   data: string;
 }
 
+interface LiderancaAtual {
+  grupo: string | null;
+  criadoEm: string;
+}
+
 interface CandidatoDuplicata {
   id: string;
   nome: string;
@@ -76,6 +81,11 @@ export function PerfilContato() {
 
   const [consentimentos, setConsentimentos] = useState<ConsentimentoAtual[]>([]);
   const [salvandoConsentimento, setSalvandoConsentimento] = useState(false);
+
+  const [lideranca, setLideranca] = useState<LiderancaAtual | null>(null);
+  const [salvandoLideranca, setSalvandoLideranca] = useState(false);
+  const [grupoLideranca, setGrupoLideranca] = useState('');
+  const [editandoGrupoLideranca, setEditandoGrupoLideranca] = useState(false);
 
   const [mostrarDemanda, setMostrarDemanda] = useState(false);
   const [categoriaDemanda, setCategoriaDemanda] = useState('');
@@ -163,6 +173,13 @@ export function PerfilContato() {
       .get<ConsentimentoAtual[]>(`/contatos/${id}/consentimento`)
       .then(setConsentimentos)
       .catch(() => undefined);
+    api
+      .get<LiderancaAtual | null>(`/contatos/${id}/lideranca`)
+      .then((l) => {
+        setLideranca(l);
+        setGrupoLideranca(l?.grupo ?? '');
+      })
+      .catch(() => undefined);
   }
 
   useEffect(carregar, [id]);
@@ -179,6 +196,36 @@ export function PerfilContato() {
       setErro(e instanceof ApiError ? e.message : 'Falha ao registrar consentimento.');
     } finally {
       setSalvandoConsentimento(false);
+    }
+  }
+
+  async function marcarLideranca() {
+    if (!id) return;
+    setSalvandoLideranca(true);
+    try {
+      const atual = await api.post<LiderancaAtual>(`/contatos/${id}/lideranca`, {
+        grupo: grupoLideranca || undefined,
+      });
+      setLideranca(atual);
+      setEditandoGrupoLideranca(false);
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : 'Falha ao marcar como liderança.');
+    } finally {
+      setSalvandoLideranca(false);
+    }
+  }
+
+  async function desmarcarLideranca() {
+    if (!id) return;
+    setSalvandoLideranca(true);
+    try {
+      await api.delete(`/contatos/${id}/lideranca`);
+      setLideranca(null);
+      setGrupoLideranca('');
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : 'Falha ao remover marcação de liderança.');
+    } finally {
+      setSalvandoLideranca(false);
     }
   }
 
@@ -429,6 +476,106 @@ export function PerfilContato() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="card" style={{ marginBottom: 12 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            🎖️ Liderança territorial
+            {lideranca && (
+              <span className="badge" style={{ background: 'var(--teal-light)', color: 'var(--teal)' }}>
+                Liderança
+              </span>
+            )}
+          </p>
+          <p style={{ margin: '0 0 10px', fontSize: 11.5, color: 'var(--muted)' }}>
+            Marcar como liderança destaca este contato no mapa territorial e nas segmentações de comunicação.
+          </p>
+
+          {!lideranca && !editandoGrupoLideranca && (
+            <button className="btn btn-primary" onClick={() => setEditandoGrupoLideranca(true)} disabled={salvandoLideranca}>
+              Marcar como liderança
+            </button>
+          )}
+
+          {!lideranca && editandoGrupoLideranca && (
+            <>
+              <div className="field" style={{ marginBottom: 10 }}>
+                <label>Grupo (opcional)</label>
+                <input
+                  value={grupoLideranca}
+                  onChange={(e) => setGrupoLideranca(e.target.value)}
+                  placeholder="ex: Força Jovem, associação de bairro…"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" onClick={marcarLideranca} disabled={salvandoLideranca}>
+                  {salvandoLideranca ? 'Salvando…' : 'Confirmar'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setEditandoGrupoLideranca(false);
+                    setGrupoLideranca('');
+                  }}
+                  disabled={salvandoLideranca}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
+
+          {lideranca && !editandoGrupoLideranca && (
+            <>
+              <Row label={lideranca.grupo ?? 'sem grupo informado'} last />
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setGrupoLideranca(lideranca.grupo ?? '');
+                    setEditandoGrupoLideranca(true);
+                  }}
+                  disabled={salvandoLideranca}
+                >
+                  Editar grupo
+                </button>
+                <button type="button" className="btn btn-outline" onClick={desmarcarLideranca} disabled={salvandoLideranca}>
+                  {salvandoLideranca ? 'Removendo…' : 'Remover marcação'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {lideranca && editandoGrupoLideranca && (
+            <>
+              <div className="field" style={{ marginBottom: 10 }}>
+                <label>Grupo (opcional)</label>
+                <input
+                  value={grupoLideranca}
+                  onChange={(e) => setGrupoLideranca(e.target.value)}
+                  placeholder="ex: Força Jovem, associação de bairro…"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" onClick={marcarLideranca} disabled={salvandoLideranca}>
+                  {salvandoLideranca ? 'Salvando…' : 'Salvar grupo'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setEditandoGrupoLideranca(false);
+                    setGrupoLideranca(lideranca.grupo ?? '');
+                  }}
+                  disabled={salvandoLideranca}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {contato.engajamentoPolitico !== undefined && (

@@ -39,7 +39,14 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto): Promise<{ accessToken: string; usuario: UsuarioSemSenha }> {
-    const usuario = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
+    // Normaliza antes de comparar — Postgres compara texto de forma
+    // case-sensitive por padrão, e um teclado de celular (iOS em
+    // particular) pode autocapitalizar a primeira letra de um campo ou
+    // deixar espaço em branco no fim sem o usuário perceber. Sem isso, a
+    // MESMA senha falha em "E-mail ou senha inválidos." só por causa da
+    // caixa do e-mail, o que parece (e não é) senha errada.
+    const email = this.normalizarEmail(dto.email);
+    const usuario = await this.prisma.usuario.findUnique({ where: { email } });
 
     // Mensagem genérica de propósito — não revela se foi o e-mail ou a
     // senha que estavam errados (evita enumeração de e-mails cadastrados).
@@ -69,7 +76,8 @@ export class AuthService {
    * sem ter sido setado explicitamente por quem está criando.
    */
   async criarUsuario(dto: CreateUsuarioDto): Promise<UsuarioSemSenha> {
-    const existente = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
+    const email = this.normalizarEmail(dto.email);
+    const existente = await this.prisma.usuario.findUnique({ where: { email } });
     if (existente) {
       throw new ConflictException('Já existe um usuário com este e-mail.');
     }
@@ -79,7 +87,7 @@ export class AuthService {
     const usuario = await this.prisma.usuario.create({
       data: {
         nome: dto.nome,
-        email: dto.email,
+        email,
         senhaHash,
         perfil: dto.perfil,
         permissaoEngajamentoPolitico: dto.permissaoEngajamentoPolitico ?? false,
@@ -88,6 +96,10 @@ export class AuthService {
     });
 
     return this.paraRespostaSemSenha(usuario);
+  }
+
+  private normalizarEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 
   private paraRespostaSemSenha(usuario: {

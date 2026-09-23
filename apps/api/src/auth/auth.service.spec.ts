@@ -65,6 +65,24 @@ describe('AuthService', () => {
       }
     });
 
+    it('login funciona com e-mail em caixa/espaçamento diferente do cadastrado (ex: autocapitalização do teclado do celular)', async () => {
+      const senhaHash = await bcrypt.hash('senha-correta-123', 12);
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 'u1',
+        email: 'a@x.com',
+        senhaHash,
+        nome: 'A',
+        perfil: 'operador',
+        permissaoEngajamentoPolitico: false,
+        municipioId: null,
+      });
+
+      const resultado = await service.login({ email: ' A@X.com ', senha: 'senha-correta-123' });
+
+      expect(prisma.usuario.findUnique).toHaveBeenCalledWith({ where: { email: 'a@x.com' } });
+      expect(resultado.accessToken).toBe('token-fake');
+    });
+
     it('login correto retorna token e usuário SEM senhaHash', async () => {
       const senhaHash = await bcrypt.hash('senha-correta-123', 12);
       prisma.usuario.findUnique.mockResolvedValue({
@@ -99,6 +117,21 @@ describe('AuthService', () => {
       ).rejects.toThrow(ConflictException);
 
       expect(prisma.usuario.create).not.toHaveBeenCalled();
+    });
+
+    it('normaliza e-mail (trim + lowercase) antes de checar duplicidade e de salvar', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(null);
+      prisma.usuario.create.mockImplementation(({ data }: any) => Promise.resolve({ id: 'x', ...data }));
+
+      await service.criarUsuario({
+        nome: 'Novo',
+        email: ' Novo@X.com ',
+        senha: 'senha-1234',
+        perfil: PerfilUsuarioEnum.OPERADOR,
+      });
+
+      expect(prisma.usuario.findUnique).toHaveBeenCalledWith({ where: { email: 'novo@x.com' } });
+      expect(prisma.usuario.create.mock.calls[0][0].data.email).toBe('novo@x.com');
     });
 
     it('NUNCA retorna senhaHash na resposta, mesmo que o Prisma retorne o campo', async () => {

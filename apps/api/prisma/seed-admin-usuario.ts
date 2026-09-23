@@ -30,14 +30,18 @@ async function main() {
     return;
   }
 
-  const email = process.env.ADMIN_BOOTSTRAP_EMAIL;
+  const emailBruto = process.env.ADMIN_BOOTSTRAP_EMAIL;
   const senha = process.env.ADMIN_BOOTSTRAP_SENHA;
 
-  if (!email || !senha) {
+  if (!emailBruto || !senha) {
     throw new Error(
       'Defina ADMIN_BOOTSTRAP_EMAIL e ADMIN_BOOTSTRAP_SENHA no ambiente antes de rodar este script.',
     );
   }
+  // Mesma normalização do AuthService.login — sem isso, um valor colado
+  // com espaço ou caixa diferente no .env cria um admin que nunca
+  // consegue logar com o e-mail exibido na tela de login.
+  const email = emailBruto.trim().toLowerCase();
   if (senha.length < 8) {
     throw new Error('ADMIN_BOOTSTRAP_SENHA precisa ter no mínimo 8 caracteres.');
   }

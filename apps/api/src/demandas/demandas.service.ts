@@ -31,6 +31,25 @@ function indiceStatus(status: StatusDemanda): number {
   return ORDEM_STATUS.indexOf(status);
 }
 
+export interface DemandaResumo {
+  id: string;
+  categoria: string;
+  descricao: string;
+  status: string;
+  prioridade: string;
+  prazo: Date | null;
+  criadoEm: Date;
+  comunidade: { id: string; nome: string };
+  contato: { id: string; nome: string } | null;
+}
+
+export interface ListagemDemandas {
+  itens: DemandaResumo[];
+  total: number;
+  pagina: number;
+  tamanhoPagina: number;
+}
+
 @Injectable()
 export class DemandasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -153,37 +172,51 @@ export class DemandasService {
    * FECHA A LACUNA: existia criação e mudança de status de demanda desde o
    * início, mas nenhum jeito de LISTAR ou ABRIR uma demanda depois de
    * criada — a única visão era a contagem agregada do Mapa/Painel. Listagem
-   * territorializada, mesmo critério de escopo de ContatosService.listar.
+   * territorializada, mesmo critério de escopo de ContatosService.listar —
+   * inclusive a mesma paginação, pra uma comunidade com dezenas de
+   * demandas não virar uma resposta gigante nem uma lista infinita na tela.
    */
   async listar(
     municipioId: string,
-    opts: { comunidadeId?: string; status?: string },
-  ) {
+    opts: { comunidadeId?: string; status?: string; pagina?: number; tamanhoPagina?: number },
+  ): Promise<ListagemDemandas> {
     if (!municipioId) {
       throw new BadRequestException('municipioId é obrigatório.');
     }
 
-    return this.prisma.demanda.findMany({
-      where: {
-        comunidade: {
-          ...(opts.comunidadeId ? { id: opts.comunidadeId } : {}),
-          bairro: { zonaEleitoral: { municipioId } },
+    const pagina = opts.pagina && opts.pagina > 0 ? opts.pagina : 1;
+    const tamanhoPagina = Math.min(opts.tamanhoPagina && opts.tamanhoPagina > 0 ? opts.tamanhoPagina : 25, 100);
+
+    const where = {
+      comunidade: {
+        ...(opts.comunidadeId ? { id: opts.comunidadeId } : {}),
+        bairro: { zonaEleitoral: { municipioId } },
+      },
+      ...(opts.status ? { status: opts.status } : {}),
+    };
+
+    const [itens, total] = await Promise.all([
+      this.prisma.demanda.findMany({
+        where,
+        select: {
+          id: true,
+          categoria: true,
+          descricao: true,
+          status: true,
+          prioridade: true,
+          prazo: true,
+          criadoEm: true,
+          comunidade: { select: { id: true, nome: true } },
+          contato: { select: { id: true, nome: true } },
         },
-        ...(opts.status ? { status: opts.status } : {}),
-      },
-      select: {
-        id: true,
-        categoria: true,
-        descricao: true,
-        status: true,
-        prioridade: true,
-        prazo: true,
-        criadoEm: true,
-        comunidade: { select: { id: true, nome: true } },
-        contato: { select: { id: true, nome: true } },
-      },
-      orderBy: { criadoEm: 'desc' },
-    });
+        orderBy: { criadoEm: 'desc' },
+        skip: (pagina - 1) * tamanhoPagina,
+        take: tamanhoPagina,
+      }),
+      this.prisma.demanda.count({ where }),
+    ]);
+
+    return { itens, total, pagina, tamanhoPagina };
   }
 
   async buscarPorId(id: string) {

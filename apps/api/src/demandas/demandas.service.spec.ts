@@ -29,7 +29,13 @@ describe('DemandasService — máquina de estado', () => {
       $transaction: jest.fn((cb) => cb(prisma)),
       comunidade: { findUnique: jest.fn().mockResolvedValue({ id: 'com-1' }) },
       contato: { findUnique: jest.fn() },
-      demanda: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+      demanda: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
+      },
       demandaHistorico: { create: jest.fn() },
     };
 
@@ -148,6 +154,26 @@ describe('DemandasService — máquina de estado', () => {
       expect(args.where.comunidade.id).toBe('com-1');
       expect(args.where.comunidade.bairro.zonaEleitoral.municipioId).toBe('municipio-1');
       expect(args.where.status).toBe(StatusDemanda.NOVA);
+    });
+
+    it('listar pagina os resultados e devolve o total pro "Ver todas"', async () => {
+      prisma.demanda.findMany.mockResolvedValue([{ id: 'd-1' }, { id: 'd-2' }]);
+      prisma.demanda.count.mockResolvedValue(37);
+
+      const resultado = await service.listar('municipio-1', { comunidadeId: 'com-1', pagina: 2, tamanhoPagina: 6 });
+
+      expect(prisma.demanda.findMany.mock.calls[0][0].skip).toBe(6); // (pagina 2 - 1) * 6
+      expect(prisma.demanda.findMany.mock.calls[0][0].take).toBe(6);
+      expect(resultado).toEqual({ itens: [{ id: 'd-1' }, { id: 'd-2' }], total: 37, pagina: 2, tamanhoPagina: 6 });
+    });
+
+    it('listar limita tamanhoPagina a 100 mesmo se pedido maior', async () => {
+      prisma.demanda.findMany.mockResolvedValue([]);
+
+      const resultado = await service.listar('municipio-1', { tamanhoPagina: 500 });
+
+      expect(resultado.tamanhoPagina).toBe(100);
+      expect(prisma.demanda.findMany.mock.calls[0][0].take).toBe(100);
     });
 
     it('buscarPorId lança NotFoundException para demanda inexistente', async () => {

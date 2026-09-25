@@ -6,7 +6,18 @@
  * GET de leitura (não incluído aqui — ver controller completo do projeto).
  */
 
-import { Body, Controller, Param, Patch, Post, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  DefaultValuePipe,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard, PerfilUsuario } from '../auth/roles.guard';
 import { DemandasService } from './demandas.service';
@@ -58,8 +69,10 @@ export class DemandasController {
     @Query('municipioId') municipioId: string,
     @Query('comunidadeId') comunidadeId?: string,
     @Query('status') status?: string,
+    @Query('pagina', new DefaultValuePipe(1), ParseIntPipe) pagina = 1,
+    @Query('tamanhoPagina', new DefaultValuePipe(25), ParseIntPipe) tamanhoPagina = 25,
   ) {
-    return this.demandasService.listar(municipioId, { comunidadeId, status });
+    return this.demandasService.listar(municipioId, { comunidadeId, status, pagina, tamanhoPagina });
   }
 
   @Get(':id')

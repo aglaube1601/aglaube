@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -23,6 +23,15 @@ interface DemandaResumo {
   comunidade: { id: string; nome: string };
   contato: { id: string; nome: string } | null;
 }
+
+interface ListagemDemandas {
+  itens: DemandaResumo[];
+  total: number;
+  pagina: number;
+  tamanhoPagina: number;
+}
+
+const DEMANDAS_PREVIEW_LIMITE = 6;
 
 const STATUS_DEMANDA_ROTULOS: Record<string, string> = {
   nova: 'Nova',
@@ -96,7 +105,7 @@ export function Mapa() {
   const [metrica, setMetrica] = useState<Metrica>('contatos');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [liderancasComunidade, setLiderancasComunidade] = useState<LiderancaResumo[] | null>(null);
-  const [demandasComunidade, setDemandasComunidade] = useState<DemandaResumo[] | null>(null);
+  const [demandasComunidade, setDemandasComunidade] = useState<ListagemDemandas | null>(null);
 
   useEffect(() => {
     if (!municipio) return;
@@ -141,7 +150,11 @@ export function Mapa() {
       return;
     }
     api
-      .get<DemandaResumo[]>('/demandas', { municipioId: municipio.id, comunidadeId: selecionadoId })
+      .get<ListagemDemandas>('/demandas', {
+        municipioId: municipio.id,
+        comunidadeId: selecionadoId,
+        tamanhoPagina: String(DEMANDAS_PREVIEW_LIMITE),
+      })
       .then(setDemandasComunidade)
       .catch(() => setDemandasComunidade(null));
   }, [municipio, selecionadoId]);
@@ -271,13 +284,13 @@ export function Mapa() {
           <p className="section-title">Demandas desta comunidade</p>
           {demandasComunidade === null ? (
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>Carregando…</p>
-          ) : demandasComunidade.length === 0 ? (
+          ) : demandasComunidade.itens.length === 0 ? (
             <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
               Nenhuma demanda registrada nesta comunidade ainda.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              {demandasComunidade.map((d) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+              {demandasComunidade.itens.map((d) => (
                 <button
                   key={d.id}
                   onClick={() => navigate(`/demandas/${d.id}`)}
@@ -303,6 +316,14 @@ export function Mapa() {
                 </button>
               ))}
             </div>
+          )}
+          {demandasComunidade && demandasComunidade.total > demandasComunidade.itens.length && (
+            <Link
+              to={`/demandas?comunidadeId=${selecionado.comunidadeId}`}
+              style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--teal)', marginBottom: 16 }}
+            >
+              Ver todas ({demandasComunidade.total}) →
+            </Link>
           )}
 
           <p className="section-title">Lideranças cadastradas</p>

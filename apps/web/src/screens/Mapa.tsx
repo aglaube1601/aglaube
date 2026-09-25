@@ -13,6 +13,33 @@ interface LiderancaResumo {
   criadoEm: string;
 }
 
+interface DemandaResumo {
+  id: string;
+  categoria: string;
+  descricao: string;
+  status: string;
+  prioridade: string;
+  criadoEm: string;
+  comunidade: { id: string; nome: string };
+  contato: { id: string; nome: string } | null;
+}
+
+const STATUS_DEMANDA_ROTULOS: Record<string, string> = {
+  nova: 'Nova',
+  em_analise: 'Em análise',
+  em_andamento: 'Em andamento',
+  resolvida: 'Resolvida',
+  encerrada: 'Encerrada',
+};
+
+const STATUS_DEMANDA_CORES: Record<string, string> = {
+  nova: 'var(--muted)',
+  em_analise: 'var(--amber)',
+  em_andamento: 'var(--teal)',
+  resolvida: 'var(--veryhigh)',
+  encerrada: 'var(--muted)',
+};
+
 interface EngajamentoAgregado {
   apoiador: number;
   simpatizante: number;
@@ -69,6 +96,7 @@ export function Mapa() {
   const [metrica, setMetrica] = useState<Metrica>('contatos');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [liderancasComunidade, setLiderancasComunidade] = useState<LiderancaResumo[] | null>(null);
+  const [demandasComunidade, setDemandasComunidade] = useState<DemandaResumo[] | null>(null);
 
   useEffect(() => {
     if (!municipio) return;
@@ -107,6 +135,17 @@ export function Mapa() {
       .catch(() => setLiderancasComunidade(null));
   }, [municipio, selecionadoId]);
 
+  useEffect(() => {
+    if (!municipio || !selecionadoId) {
+      setDemandasComunidade(null);
+      return;
+    }
+    api
+      .get<DemandaResumo[]>('/demandas', { municipioId: municipio.id, comunidadeId: selecionadoId })
+      .then(setDemandasComunidade)
+      .catch(() => setDemandasComunidade(null));
+  }, [municipio, selecionadoId]);
+
   if (erro) return <div className="alert alert-error" style={{ margin: 16 }}>{erro}</div>;
   if (!territorios) return <div className="spinner">Carregando mapa…</div>;
 
@@ -138,15 +177,40 @@ export function Mapa() {
                 style={{
                   position: 'relative',
                   textAlign: 'left',
-                  border: isSel ? '2px solid var(--navy)' : '2px solid transparent',
+                  border: isSel ? '3px solid var(--navy)' : '3px solid transparent',
                   borderRadius: 10,
                   padding: '12px 10px',
                   cursor: 'pointer',
                   background: corPorFaixa(valorMetrica(t, metrica), max),
                   minHeight: 78,
-                  boxShadow: isSel ? '0 4px 10px rgba(21,34,56,0.25)' : '0 1px 3px rgba(21,34,56,0.08)',
+                  boxShadow: isSel ? '0 0 0 2px #fff inset, 0 4px 10px rgba(21,34,56,0.35)' : '0 1px 3px rgba(21,34,56,0.08)',
                 }}
               >
+                {/* Indicador de SELEÇÃO — canto inferior-esquerdo, cheio de navy,
+                    propositalmente diferente do badge branco de "tem liderança"
+                    (canto superior-direito) pra nunca serem confundidos. */}
+                {isSel && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: 8,
+                      left: 8,
+                      background: 'var(--navy)',
+                      color: '#fff',
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                    title="comunidade selecionada"
+                  >
+                    ✓
+                  </span>
+                )}
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{t.nome}</span>
                 {t.liderancasAtivas > 0 && (
                   <span
@@ -155,17 +219,18 @@ export function Mapa() {
                       top: 8,
                       right: 8,
                       background: '#fff',
+                      border: '1px solid var(--line)',
                       borderRadius: '50%',
                       width: 18,
                       height: 18,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 10,
+                      fontSize: 9,
                     }}
-                    title="tem liderança"
+                    title="tem liderança cadastrada"
                   >
-                    ✓
+                    🎖️
                   </span>
                 )}
               </button>
@@ -202,6 +267,43 @@ export function Mapa() {
             <MiniStat label="demandas abertas" value={selecionado.demandasAbertas} />
             <MiniStat label="lideranças ativas" value={selecionado.liderancasAtivas} />
           </div>
+
+          <p className="section-title">Demandas desta comunidade</p>
+          {demandasComunidade === null ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>Carregando…</p>
+          ) : demandasComunidade.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
+              Nenhuma demanda registrada nesta comunidade ainda.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              {demandasComunidade.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => navigate(`/demandas/${d.id}`)}
+                  className="card"
+                  style={{ textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700 }}>{d.categoria}</span>
+                    <span
+                      className="badge"
+                      style={{
+                        background: `${STATUS_DEMANDA_CORES[d.status] ?? 'var(--muted)'}22`,
+                        color: STATUS_DEMANDA_CORES[d.status] ?? 'var(--muted)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {STATUS_DEMANDA_ROTULOS[d.status] ?? d.status}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {d.descricao}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
 
           <p className="section-title">Lideranças cadastradas</p>
           {liderancasComunidade === null ? (

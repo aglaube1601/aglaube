@@ -3,7 +3,7 @@
  */
 
 import { Test } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DemandasService } from './demandas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusDemanda } from './dto/create-demanda.dto';
@@ -29,7 +29,7 @@ describe('DemandasService — máquina de estado', () => {
       $transaction: jest.fn((cb) => cb(prisma)),
       comunidade: { findUnique: jest.fn().mockResolvedValue({ id: 'com-1' }) },
       contato: { findUnique: jest.fn() },
-      demanda: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+      demanda: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn() },
       demandaHistorico: { create: jest.fn() },
     };
 
@@ -131,5 +131,42 @@ describe('DemandasService — máquina de estado', () => {
     await expect(
       service.atualizarStatus('não-existe', StatusDemanda.EM_ANALISE, operador),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  describe('regra: listagem e detalhe de demanda — a lacuna que só tinha criação/mudança de status', () => {
+    it('listar rejeita sem municipioId', async () => {
+      await expect(service.listar('', {})).rejects.toThrow(BadRequestException);
+      expect(prisma.demanda.findMany).not.toHaveBeenCalled();
+    });
+
+    it('listar filtra por território, comunidade e status', async () => {
+      prisma.demanda.findMany.mockResolvedValue([]);
+
+      await service.listar('municipio-1', { comunidadeId: 'com-1', status: StatusDemanda.NOVA });
+
+      const args = prisma.demanda.findMany.mock.calls[0][0];
+      expect(args.where.comunidade.id).toBe('com-1');
+      expect(args.where.comunidade.bairro.zonaEleitoral.municipioId).toBe('municipio-1');
+      expect(args.where.status).toBe(StatusDemanda.NOVA);
+    });
+
+    it('buscarPorId lança NotFoundException para demanda inexistente', async () => {
+      prisma.demanda.findUnique.mockResolvedValue(null);
+
+      await expect(service.buscarPorId('não-existe')).rejects.toThrow(NotFoundException);
+    });
+
+    it('buscarPorId retorna a demanda com histórico', async () => {
+      prisma.demanda.findUnique.mockResolvedValue({
+        id: 'd-1',
+        categoria: 'iluminação',
+        status: StatusDemanda.EM_ANALISE,
+        historico: [{ id: 'h-1', statusNovo: StatusDemanda.EM_ANALISE }],
+      });
+
+      const resultado = await service.buscarPorId('d-1');
+
+      expect(resultado.historico).toHaveLength(1);
+    });
   });
 });

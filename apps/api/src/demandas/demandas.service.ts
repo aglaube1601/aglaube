@@ -13,7 +13,7 @@
  *    módulo Contatos.
  */
 
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDemandaDto, StatusDemanda } from './dto/create-demanda.dto';
 import { UsuarioAutenticado } from '../contatos/contatos.service';
@@ -147,6 +147,78 @@ export class DemandasService {
 
       return atualizada;
     });
+  }
+
+  /**
+   * FECHA A LACUNA: existia criação e mudança de status de demanda desde o
+   * início, mas nenhum jeito de LISTAR ou ABRIR uma demanda depois de
+   * criada — a única visão era a contagem agregada do Mapa/Painel. Listagem
+   * territorializada, mesmo critério de escopo de ContatosService.listar.
+   */
+  async listar(
+    municipioId: string,
+    opts: { comunidadeId?: string; status?: string },
+  ) {
+    if (!municipioId) {
+      throw new BadRequestException('municipioId é obrigatório.');
+    }
+
+    return this.prisma.demanda.findMany({
+      where: {
+        comunidade: {
+          ...(opts.comunidadeId ? { id: opts.comunidadeId } : {}),
+          bairro: { zonaEleitoral: { municipioId } },
+        },
+        ...(opts.status ? { status: opts.status } : {}),
+      },
+      select: {
+        id: true,
+        categoria: true,
+        descricao: true,
+        status: true,
+        prioridade: true,
+        prazo: true,
+        criadoEm: true,
+        comunidade: { select: { id: true, nome: true } },
+        contato: { select: { id: true, nome: true } },
+      },
+      orderBy: { criadoEm: 'desc' },
+    });
+  }
+
+  async buscarPorId(id: string) {
+    const demanda = await this.prisma.demanda.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        categoria: true,
+        descricao: true,
+        status: true,
+        prioridade: true,
+        prazo: true,
+        criadoEm: true,
+        comunidade: { select: { id: true, nome: true } },
+        contato: { select: { id: true, nome: true } },
+        responsavel: { select: { id: true, nome: true } },
+        historico: {
+          orderBy: { data: 'desc' },
+          select: {
+            id: true,
+            statusAnterior: true,
+            statusNovo: true,
+            justificativa: true,
+            data: true,
+            alteradoPor: { select: { id: true, nome: true } },
+          },
+        },
+      },
+    });
+
+    if (!demanda) {
+      throw new NotFoundException('Demanda não encontrada.');
+    }
+
+    return demanda;
   }
 
   /**

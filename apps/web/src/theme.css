@@ -1,0 +1,379 @@
+/* Paleta civic navy/teal — mesma do wireframe aprovado (mapa/cadastro). */
+:root {
+  --ink: #152238;
+  --navy: #1b2a4a;
+  --teal: #2d6e7e;
+  --teal-light: #dceaea;
+  --amber: #c98a3e;
+  --amber-light: #f5e6ce;
+  --paper: #f6f4ef;
+  --card: #ffffff;
+  --line: #e4e1d8;
+  --muted: #6b7280;
+  --low: #e3e7d3;
+  --mid: #b9d2c4;
+  --high: #5c9a80;
+  --veryhigh: #2d6e4f;
+  --danger: #b85450;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+/* Mobile-first: app-shell é uma coluna de largura fixa tipo "tira de
+   celular". A partir do breakpoint de desktop, vira layout de largura
+   total com topbar + sidebar de navegação fixa (ver .body-layout /
+   .sidebar-nav abaixo) — bottom-nav sai, sidebar entra. */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar h1 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.topbar button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  opacity: 0.85;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.body-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 84px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: flex;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.bottom-nav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 0;
+  border-radius: 8px;
+}
+
+.bottom-nav a.active {
+  color: var(--teal);
+  background: var(--teal-light);
+}
+
+.sidebar-nav {
+  display: none;
+}
+
+/* Desktop/tablet-largo: solta a largura fixa de 480px, entra o layout de
+   sidebar. 860px cobre a maioria dos laptops sem cortar em tablets em
+   modo retrato. */
+@media (min-width: 860px) {
+  .app-shell {
+    max-width: none;
+    margin: 0;
+  }
+
+  .body-layout {
+    flex-direction: row;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 9px;
+  }
+
+  .sidebar-nav a:hover {
+    background: var(--paper);
+  }
+
+  .sidebar-nav a.active {
+    color: var(--teal);
+    background: var(--teal-light);
+  }
+
+  .sidebar-nav a .nav-icon {
+    font-size: 16px;
+  }
+
+  .screen {
+    padding-bottom: 32px;
+  }
+
+  .screen-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 0;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+}
+
+.btn-success {
+  background: var(--veryhigh);
+  color: #fff;
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+}
+
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.chip.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.alert-amber {
+  background: var(--amber-light);
+  color: var(--ink);
+}
+
+.alert-error {
+  background: #fbe4e2;
+  color: var(--danger);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 860px) {
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+}
+
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.kpi-card .value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 4px 0 2px;
+}
+
+.kpi-card .label {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 860px) {
+  .chart-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 14px;
+  }
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin: 18px 0 8px;
+}
+
+.spinner {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  display: inline-block;
+}

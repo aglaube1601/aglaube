@@ -1,0 +1,292 @@
+// schema.prisma
+//
+// Consolidação formal de tudo que foi desenhado e referenciado nos services
+// construídos. Duas entidades (EnvioMensagem, CampanhaComunicacao) nasceram
+// durante o desenvolvimento do módulo Comunicação e não estavam no desenho
+// conceitual original — estão aqui pela primeira vez formalizadas.
+//
+// Comentários de compliance mantidos junto ao campo que protegem, para que
+// não sejam perdidos em refatorações futuras.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm]
+}
+
+// ---------- TERRITÓRIO ----------
+
+model Municipio {
+  id                String   @id @default(uuid())
+  nome              String
+  uf                String
+  populacaoEstimada Int?
+  zonasEleitorais   ZonaEleitoral[]
+  usuarios          Usuario[]
+  criadoEm          DateTime @default(now())
+}
+
+model ZonaEleitoral {
+  id                      String    @id @default(uuid())
+  municipioId             String
+  municipio               Municipio @relation(fields: [municipioId], references: [id])
+  numero                  Int
+  comparecimentoHistorico Int?
+  bairros                 Bairro[]
+
+  @@unique([municipioId, numero])
+}
+
+model Bairro {
+  id              String        @id @default(uuid())
+  zonaEleitoralId String
+  zonaEleitoral   ZonaEleitoral @relation(fields: [zonaEleitoralId], references: [id])
+  nome            String
+  comunidades     Comunidade[]
+}
+
+model Comunidade {
+  id                   String   @id @default(uuid())
+  bairroId             String
+  bairro               Bairro   @relation(fields: [bairroId], references: [id])
+  nome                 String
+  populacaoEstimada    Int?
+  contatos             Contato[]
+  demandas             Demanda[]
+  eventos              EventoAcao[]
+  // FK adicionada durante o desenvolvimento real — ver HANDOFF.md §3
+  dadosEleitorais      DadosEleitoraisPublicos[]
+}
+
+// ---------- CONTATOS E ENGAJAMENTO ----------
+
+model Contato {
+  id                    String    @id @default(uuid())
+  nome                  String
+  telefone              String?
+  whatsapp              String?
+  dataNascimento        DateTime?
+  endereco              String?
+  comunidadeId          String
+  comunidade            Comunidade @relation(fields: [comunidadeId], references: [id])
+  profissao             String?
+  origemCadastro        String?
+  responsavelCadastroId String?
+  responsavelCadastro   Usuario?  @relation("ContatosCadastrados", fields: [responsavelCadastroId], references: [id])
+  criadoEm              DateTime  @default(now())
+  atualizadoEm          DateTime  @updatedAt
+
+  engajamentos          EngajamentoPolitico[]
+  interacoes            Interacao[]
+  demandas              Demanda[]
+  lideranca             Lideranca?
+  consentimentos        Consentimento[]
+  eventosParticipados   EventoParticipante[]
+  enviosMensagem        EnvioMensagem[]
+
+  // Índice de suporte ao dedup por similaridade — ver 0001_enable_pg_trgm.sql
+  @@index([nome])
+}
+
+// EngajamentoPolitico é dado sensível (opinião política, LGPD art. 5º II).
+// NUNCA sofre UPDATE — toda mudança cria novo registro com vigente=true e
+// marca o anterior como vigente=false. Ver ContatosService.atualizarEngajamento.
+model EngajamentoPolitico {
+  id              String    @id @default(uuid())
+  contatoId       String
+  contato         Contato   @relation(fields: [contatoId], references: [id])
+  status          String    // apoiador | simpatizante | neutro | percepcao_negativa | desconhecido
+  origem          String    // autodeclarado | percepcao_lideranca | percepcao_equipe
+  confianca       String    // alta | media | baixa
+  registradoPorId String
+  registradoPor   Usuario   @relation(fields: [registradoPorId], references: [id])
+  vigente         Boolean   @default(true)
+  criadoEm        DateTime  @default(now())
+
+  interacoesQueAtualizaram Interacao[] @relation("InteracaoAtualizouEngajamento")
+
+  @@index([contatoId, vigente])
+}
+
+model Lideranca {
+  id        String  @id @default(uuid())
+  contatoId String  @unique
+  contato   Contato @relation(fields: [contatoId], references: [id])
+  grupo     String? // ex: "Força Jovem"
+  criadoEm  DateTime @default(now())
+}
+
+// ---------- DEMANDAS ----------
+
+model Demanda {
+  id             String    @id @default(uuid())
+  categoria      String
+  descricao      String
+  comunidadeId   String
+  comunidade     Comunidade @relation(fields: [comunidadeId], references: [id])
+  contatoId      String?
+  contato        Contato?   @relation(fields: [contatoId], references: [id])
+  prioridade     String     @default("media") // baixa | media | alta
+  status         String     @default("nova")  // nova | em_analise | em_andamento | resolvida | encerrada
+  responsavelId  String?
+  responsavel    Usuario?   @relation(fields: [responsavelId], references: [id])
+  prazo          DateTime?
+  criadoEm       DateTime   @default(now())
+  atualizadoEm   DateTime   @updatedAt
+
+  historico      DemandaHistorico[]
+}
+
+model DemandaHistorico {
+  id              String   @id @default(uuid())
+  demandaId       String
+  demanda         Demanda  @relation(fields: [demandaId], references: [id])
+  statusAnterior  String?
+  statusNovo      String
+  alteradoPorId   String
+  alteradoPor     Usuario  @relation(fields: [alteradoPorId], references: [id])
+  justificativa   String?  // preenchido só quando é pulo de etapa forçado
+  data            DateTime @default(now())
+}
+
+// ---------- INTERAÇÕES ----------
+
+model Interacao {
+  id                       String               @id @default(uuid())
+  contatoId                String
+  contato                  Contato              @relation(fields: [contatoId], references: [id])
+  tipo                     String
+  descricao                String
+  responsavelId            String
+  responsavel              Usuario              @relation(fields: [responsavelId], references: [id])
+  data                     DateTime             @default(now())
+  // Referência opcional — NUNCA cria/altera engajamento diretamente.
+  // Ver InteracoesService.
+  atualizouEngajamentoId   String?
+  atualizouEngajamento     EngajamentoPolitico? @relation("InteracaoAtualizouEngajamento", fields: [atualizouEngajamentoId], references: [id])
+}
+
+// ---------- EVENTOS E AÇÕES ----------
+
+model EventoAcao {
+  id             String   @id @default(uuid())
+  comunidadeId   String
+  comunidade     Comunidade @relation(fields: [comunidadeId], references: [id])
+  tipo           String
+  // Flag de isolamento obrigatória entre dado político e assistencial —
+  // ver seção 10 do desenho original do produto.
+  categoriaDado  String   // "politico" | "assistencial"
+  data           DateTime
+  local          String?
+  publicoEstimado Int?
+  observacoes    String?
+
+  participantes  EventoParticipante[]
+}
+
+model EventoParticipante {
+  eventoId  String
+  evento    EventoAcao @relation(fields: [eventoId], references: [id])
+  contatoId String
+  contato   Contato    @relation(fields: [contatoId], references: [id])
+
+  @@id([eventoId, contatoId])
+}
+
+// ---------- CONSENTIMENTO ----------
+
+model Consentimento {
+  id         String   @id @default(uuid())
+  contatoId  String
+  contato    Contato  @relation(fields: [contatoId], references: [id])
+  finalidade String   // comunicacao_institucional | outra
+  status     String   // ativo | opt_out | nao_perguntado
+  origem     String?
+  data       DateTime @default(now())
+
+  @@index([contatoId, finalidade, status])
+}
+
+// ---------- DADOS ELEITORAIS PÚBLICOS ----------
+// Regra inegociável: NUNCA tem FK para Contato. Só território.
+
+model DadosEleitoraisPublicos {
+  id              String      @id @default(uuid())
+  comunidadeId    String?
+  comunidade      Comunidade? @relation(fields: [comunidadeId], references: [id])
+  eleicaoAno      Int
+  cargo           String
+  candidatoNumero Int
+  candidatoNome   String
+  votosObtidos    Int
+
+  @@index([comunidadeId, eleicaoAno])
+}
+
+// ---------- COMUNICAÇÃO ----------
+// Entidades novas — formalizadas aqui pela primeira vez (ver HANDOFF.md §3)
+
+model CampanhaComunicacao {
+  id                     String   @id @default(uuid())
+  tipoTemplate           String
+  corpoMensagem          String
+  finalidade             String
+  criadoPorId            String
+  criadoPor              Usuario  @relation(fields: [criadoPorId], references: [id])
+  sinalizadoParaRevisao  Boolean  @default(false)
+  criadoEm               DateTime @default(now())
+
+  envios                 EnvioMensagem[]
+}
+
+model EnvioMensagem {
+  id              String              @id @default(uuid())
+  campanhaId      String
+  campanha        CampanhaComunicacao @relation(fields: [campanhaId], references: [id])
+  contatoId       String
+  contato         Contato             @relation(fields: [contatoId], references: [id])
+  idempotencyKey  String              @unique // ver 0002_envio_mensagem_idempotencia.sql
+  status          String              @default("pendente") // pendente | enviado | falha
+  criadoEm        DateTime            @default(now())
+}
+
+// ---------- USUÁRIOS E AUDITORIA ----------
+
+model Usuario {
+  id                            String   @id @default(uuid())
+  nome                          String
+  email                         String   @unique
+  senhaHash                     String
+  perfil                        String   // administrador | coordenador | operador | visualizacao
+  permissaoEngajamentoPolitico  Boolean  @default(false)
+  municipioId                   String?
+  municipio                     Municipio? @relation(fields: [municipioId], references: [id])
+  criadoEm                      DateTime @default(now())
+
+  contatosCadastrados     Contato[]              @relation("ContatosCadastrados")
+  engajamentosRegistrados EngajamentoPolitico[]
+  demandasResponsavel     Demanda[]
+  demandaHistoricos       DemandaHistorico[]
+  interacoes              Interacao[]
+  logsAuditoria           LogAuditoria[]
+  campanhasCriadas        CampanhaComunicacao[]
+}
+
+model LogAuditoria {
+  id         String   @id @default(uuid())
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  entidade   String
+  entidadeId String
+  acao       String   // leitura | criacao | edicao | exclusao | exportacao
+  detalhes   Json?
+  timestamp  DateTime @default(now())
+
+  @@index([entidade, entidadeId])
+  @@index([usuarioId])
+}

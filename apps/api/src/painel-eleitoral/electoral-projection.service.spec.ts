@@ -115,4 +115,14 @@ describe('ElectoralProjectionService', () => {
     expect(resultado.avisoMetodologico).toBeTruthy();
     expect(resultado.avisoMetodologico.length).toBeGreaterThan(20);
   });
+
+  it('filtra por cargo=PREFEITO — nunca soma voto de legenda de Vereador cujo número coincida', async () => {
+    mockVotos(1821, 903);
+
+    await service.calcularMetaVotos('municipio-1', 2024, 12, 15);
+
+    expect(prisma.dadosEleitoraisPublicos.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ cargo: 'PREFEITO' }) }),
+    );
+  });
 });

@@ -70,6 +70,13 @@ export class ElectoralProjectionService {
    * município, para uma eleição específica. Consulta apenas
    * DadosEleitoraisPublicos (dado público agregado por comunidade,
    * nunca ligado a Contato).
+   *
+   * Travado em cargo=PREFEITO de propósito: este painel só faz sentido pra
+   * um cargo majoritário de vencedor único (sucessão/situação x oposição).
+   * Sem esse filtro, um candidato a Vereador cujo número de legenda
+   * coincidisse com o número do Prefeito (bem possível — legenda usa só o
+   * número do partido, 2 dígitos, igual prefeito) entraria somado junto,
+   * inflando a base sem nenhum aviso.
    */
   private async somarVotosPorCandidato(
     municipioId: string,
@@ -80,6 +87,7 @@ export class ElectoralProjectionService {
       where: {
         eleicaoAno,
         candidatoNumero,
+        cargo: 'PREFEITO',
         comunidade: { bairro: { zonaEleitoral: { municipioId } } },
       },
       select: { votosObtidos: true },

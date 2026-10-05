@@ -63,6 +63,11 @@ interface DadosEleitorais {
   votosObtidos: number;
 }
 
+interface DadosEleitoraisPorSecao {
+  secaoNumero: number;
+  candidatos: DadosEleitorais[];
+}
+
 interface TerritorioMapa {
   comunidadeId: string;
   nome: string;
@@ -72,6 +77,7 @@ interface TerritorioMapa {
   demandasAbertas: number;
   engajamentoAgregado: EngajamentoAgregado | null;
   dadosEleitorais: DadosEleitorais[];
+  dadosEleitoraisPorSecao: DadosEleitoraisPorSecao[];
 }
 
 type Metrica = 'contatos' | 'demandas' | 'liderancas';
@@ -106,6 +112,7 @@ export function Mapa() {
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [liderancasComunidade, setLiderancasComunidade] = useState<LiderancaResumo[] | null>(null);
   const [demandasComunidade, setDemandasComunidade] = useState<ListagemDemandas | null>(null);
+  const [mostrarPorSecao, setMostrarPorSecao] = useState(false);
 
   useEffect(() => {
     if (!municipio) return;
@@ -365,17 +372,50 @@ export function Mapa() {
 
           {selecionado.dadosEleitorais.length > 0 && (
             <>
-              <p className="section-title">Resultado eleitoral (TSE, agregado)</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {selecionado.dadosEleitorais.map((d) => (
-                  <div key={d.candidatoNumero} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
-                    <span>
-                      {d.candidatoNumero} · {d.candidatoNome}
-                    </span>
-                    <strong>{d.votosObtidos} votos</strong>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, marginBottom: 8 }}>
+                <p className="section-title" style={{ margin: 0 }}>
+                  Resultado eleitoral — Prefeito (TSE, agregado)
+                </p>
+                {selecionado.dadosEleitoraisPorSecao.length > 0 && (
+                  <button
+                    onClick={() => setMostrarPorSecao((s) => !s)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--teal)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                  >
+                    {mostrarPorSecao ? 'Ver agregado' : 'Ver por seção'}
+                  </button>
+                )}
               </div>
+
+              {!mostrarPorSecao ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {selecionado.dadosEleitorais.map((d) => (
+                    <div key={d.candidatoNumero} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+                      <span>
+                        {d.candidatoNumero} · {d.candidatoNome}
+                      </span>
+                      <strong>{d.votosObtidos} votos</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {selecionado.dadosEleitoraisPorSecao.map((s) => (
+                    <div key={s.secaoNumero} className="card" style={{ padding: 10 }}>
+                      <p style={{ margin: '0 0 6px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)' }}>
+                        Seção {String(s.secaoNumero).padStart(4, '0')}
+                      </p>
+                      {s.candidatos.map((c) => (
+                        <div key={c.candidatoNumero} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span>
+                            {c.candidatoNumero} · {c.candidatoNome}
+                          </span>
+                          <strong>{c.votosObtidos} votos</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

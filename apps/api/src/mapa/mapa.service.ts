@@ -34,6 +34,11 @@ export interface DadosEleitoraisComunidade {
   votosObtidos: number;
 }
 
+export interface DadosEleitoraisPorSecao {
+  secaoNumero: number;
+  candidatos: DadosEleitoraisComunidade[];
+}
+
 export interface EngajamentoAgregado {
   apoiador: number;
   simpatizante: number;
@@ -51,6 +56,7 @@ export interface TerritorioMapa {
   demandasAbertas: number;
   engajamentoAgregado: EngajamentoAgregado | null; // null = abaixo do piso de k-anonimato
   dadosEleitorais: DadosEleitoraisComunidade[];
+  dadosEleitoraisPorSecao: DadosEleitoraisPorSecao[];
 }
 
 @Injectable()
@@ -70,7 +76,7 @@ export class MapaService {
 
     const resultado = await Promise.all(
       comunidades.map(async (com) => {
-        const [liderancasAtivas, demandasAbertas, engajamento, dadosEleitorais] =
+        const [liderancasAtivas, demandasAbertas, engajamento, dadosEleitorais, dadosEleitoraisPorSecao] =
           await Promise.all([
             this.prisma.lideranca.count({
               where: { contato: { comunidadeId: com.id } },
@@ -83,6 +89,7 @@ export class MapaService {
             }),
             this.obterEngajamentoAgregado(com.id, com._count.contatos),
             this.obterDadosEleitorais(com.id),
+            this.obterDadosEleitoraisPorSecao(com.id),
           ]);
 
         return {
@@ -94,6 +101,7 @@ export class MapaService {
           demandasAbertas,
           engajamentoAgregado: engajamento,
           dadosEleitorais,
+          dadosEleitoraisPorSecao,
         };
       }),
     );
@@ -161,5 +169,38 @@ export class MapaService {
       candidatoNome: r.candidatoNome,
       votosObtidos: r._sum.votosObtidos ?? 0,
     }));
+  }
+
+  /**
+   * Mesmo resultado de obterDadosEleitorais, mas aberto por seção em vez de
+   * somado na comunidade inteira — só entra aqui quem tem secaoEleitoralId
+   * preenchido (dado antigo, só agregado, nunca aparece aqui). Também
+   * travado em cargo=PREFEITO pelo mesmo motivo do método acima.
+   */
+  private async obterDadosEleitoraisPorSecao(comunidadeId: string): Promise<DadosEleitoraisPorSecao[]> {
+    const registros = await this.prisma.dadosEleitoraisPublicos.findMany({
+      where: { comunidadeId, cargo: 'PREFEITO', secaoEleitoralId: { not: null } },
+      select: {
+        candidatoNumero: true,
+        candidatoNome: true,
+        votosObtidos: true,
+        secaoEleitoral: { select: { numero: true } },
+      },
+    });
+
+    const porSecao = new Map<number, DadosEleitoraisComunidade[]>();
+    for (const r of registros) {
+      const numero = r.secaoEleitoral!.numero;
+      const lista = porSecao.get(numero) ?? [];
+      lista.push({ candidatoNumero: r.candidatoNumero, candidatoNome: r.candidatoNome, votosObtidos: r.votosObtidos });
+      porSecao.set(numero, lista);
+    }
+
+    return Array.from(porSecao.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([secaoNumero, candidatos]) => ({
+        secaoNumero,
+        candidatos: candidatos.sort((a, b) => a.candidatoNumero - b.candidatoNumero),
+      }));
   }
 }

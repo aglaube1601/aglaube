@@ -143,10 +143,16 @@ export class MapaService {
     return mapa[status] ?? null;
   }
 
+  /**
+   * Mostra só Prefeito — DadosEleitoraisPublicos passou a guardar mais de
+   * uma eleição/cargo por comunidade (ex: Presidente 2026, por seção). Sem
+   * filtrar por cargo aqui, o groupBy somaria candidatos de corridas
+   * diferentes numa lista só, como se fosse um resultado único.
+   */
   private async obterDadosEleitorais(comunidadeId: string): Promise<DadosEleitoraisComunidade[]> {
     const registros = await this.prisma.dadosEleitoraisPublicos.groupBy({
       by: ['candidatoNumero', 'candidatoNome'],
-      where: { comunidadeId },
+      where: { comunidadeId, cargo: 'PREFEITO' },
       _sum: { votosObtidos: true },
     });
 

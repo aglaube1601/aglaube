@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "seed": "ts-node prisma/seed.ts",
     "seed:admin": "ts-node prisma/seed-admin-usuario.ts",
-    "seed:teste": "ts-node prisma/seed-contatos-teste.ts"
+    "seed:teste": "ts-node prisma/seed-contatos-teste.ts",
+    "seed:secoes": "ts-node prisma/seed-secoes-eleitorais.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

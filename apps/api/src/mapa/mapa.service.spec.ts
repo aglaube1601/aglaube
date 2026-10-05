@@ -87,6 +87,17 @@ describe('MapaService', () => {
     ]);
   });
 
+  it('filtra dados eleitorais por cargo=PREFEITO — nunca mistura com outra eleição guardada pra mesma comunidade', async () => {
+    mockComunidade(10);
+    prisma.engajamentoPolitico.groupBy.mockResolvedValue([]);
+
+    await service.obterTerritorios('municipio-1');
+
+    expect(prisma.dadosEleitoraisPublicos.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { comunidadeId: 'com-1', cargo: 'PREFEITO' } }),
+    );
+  });
+
   it('território sem nenhum dado eleitoral carregado retorna array vazio, não erro', async () => {
     mockComunidade(10);
     prisma.dadosEleitoraisPublicos.groupBy.mockResolvedValue([]);

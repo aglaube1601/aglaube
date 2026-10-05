@@ -61,6 +61,26 @@ model Comunidade {
   eventos              EventoAcao[]
   // FK adicionada durante o desenvolvimento real — ver HANDOFF.md §3
   dadosEleitorais      DadosEleitoraisPublicos[]
+  secoesEleitorais     SecaoEleitoral[]
+}
+
+// Relação seção eleitoral -> comunidade. Sem isso, todo dado importado do
+// TSE (que vem por seção, nunca por comunidade) tinha que ser agregado à
+// mão fora do sistema antes de entrar — essa tabela guarda o de-para oficial
+// (local de votação + endereço, do arquivo "local de votação" do TSE) uma
+// vez, pra todo import futuro de resultado eleitoral reaproveitar.
+model SecaoEleitoral {
+  id               String   @id @default(uuid())
+  zona             Int
+  numero           Int
+  nrLocalVotacao   Int?
+  nomeLocalVotacao String?
+  endereco         String?
+  comunidadeId     String
+  comunidade       Comunidade @relation(fields: [comunidadeId], references: [id])
+  dadosEleitorais  DadosEleitoraisPublicos[]
+
+  @@unique([zona, numero])
 }
 
 // ---------- CONTATOS E ENGAJAMENTO ----------
@@ -216,16 +236,24 @@ model Consentimento {
 // Regra inegociável: NUNCA tem FK para Contato. Só território.
 
 model DadosEleitoraisPublicos {
-  id              String      @id @default(uuid())
-  comunidadeId    String?
-  comunidade      Comunidade? @relation(fields: [comunidadeId], references: [id])
-  eleicaoAno      Int
-  cargo           String
-  candidatoNumero Int
-  candidatoNome   String
-  votosObtidos    Int
+  id               String          @id @default(uuid())
+  comunidadeId     String?
+  comunidade       Comunidade?     @relation(fields: [comunidadeId], references: [id])
+  // Opcional — nem toda fonte de dado eleitoral vem com granularidade de
+  // seção (ex: dado histórico só agregado). Quando presente, comunidadeId
+  // é redundante com secaoEleitoral.comunidadeId (mantido denormalizado de
+  // propósito: toda query existente que já filtra por comunidadeId continua
+  // funcionando sem precisar saber que SecaoEleitoral existe).
+  secaoEleitoralId String?
+  secaoEleitoral   SecaoEleitoral? @relation(fields: [secaoEleitoralId], references: [id])
+  eleicaoAno       Int
+  cargo            String
+  candidatoNumero  Int
+  candidatoNome    String
+  votosObtidos     Int
 
   @@index([comunidadeId, eleicaoAno])
+  @@index([secaoEleitoralId])
 }
 
 // ---------- COMUNICAÇÃO ----------

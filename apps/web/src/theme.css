@@ -1,0 +1,738 @@
+/* Paleta civic navy/teal — mesma do wireframe aprovado (mapa/cadastro). */
+:root {
+  --ink: #152238;
+  --navy: #1b2a4a;
+  --teal: #2d6e7e;
+  --teal-light: #dceaea;
+  --amber: #c98a3e;
+  --amber-light: #f5e6ce;
+  --paper: #f6f4ef;
+  --card: #ffffff;
+  --line: #e4e1d8;
+  --muted: #6b7280;
+  --low: #e3e7d3;
+  --mid: #b9d2c4;
+  --high: #5c9a80;
+  --veryhigh: #2d6e4f;
+  --danger: #b85450;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+/* Mobile-first: app-shell é uma coluna de largura fixa tipo "tira de
+   celular". A partir do breakpoint de desktop, vira layout de largura
+   total com topbar + sidebar de navegação fixa (ver .body-layout /
+   .sidebar-nav abaixo) — bottom-nav sai, sidebar entra. */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar h1 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.topbar button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  opacity: 0.85;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.body-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 84px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: flex;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.bottom-nav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 0;
+  border-radius: 8px;
+}
+
+.bottom-nav a.active {
+  color: var(--teal);
+  background: var(--teal-light);
+}
+
+.sidebar-nav {
+  display: none;
+}
+
+/* Desktop/tablet-largo: solta a largura fixa de 480px, entra o layout de
+   sidebar. 860px cobre a maioria dos laptops sem cortar em tablets em
+   modo retrato. */
+@media (min-width: 860px) {
+  .app-shell {
+    max-width: none;
+    margin: 0;
+  }
+
+  .body-layout {
+    flex-direction: row;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 9px;
+  }
+
+  .sidebar-nav a:hover {
+    background: var(--paper);
+  }
+
+  .sidebar-nav a.active {
+    color: var(--teal);
+    background: var(--teal-light);
+  }
+
+  .sidebar-nav a .nav-icon {
+    font-size: 16px;
+  }
+
+  .screen {
+    padding-bottom: 32px;
+  }
+
+  .screen-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 0;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+}
+
+.btn-success {
+  background: var(--veryhigh);
+  color: #fff;
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+}
+
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.chip.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.alert-amber {
+  background: var(--amber-light);
+  color: var(--ink);
+}
+
+.alert-error {
+  background: #fbe4e2;
+  color: var(--danger);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 860px) {
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+}
+
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.kpi-card .value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 4px 0 2px;
+}
+
+.kpi-card .label {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 860px) {
+  .chart-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 14px;
+  }
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin: 18px 0 8px;
+}
+
+.spinner {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* Jornal Médico — cartaz no estilo "research summary" (referência: NEJM). */
+.jornal-visual {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.jornal-masthead {
+  background: var(--navy);
+  color: #fff;
+  text-align: center;
+  padding: 22px 20px 20px;
+}
+
+.jornal-masthead .eyebrow {
+  font-size: 11px;
+  font-style: italic;
+  letter-spacing: 0.6px;
+  opacity: 0.85;
+  margin: 0 0 8px;
+}
+
+.jornal-masthead h1 {
+  font-size: 23px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+
+.jornal-masthead .jornal-topico-semana {
+  font-size: 13.5px;
+  font-weight: 600;
+  opacity: 0.92;
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.jornal-masthead .byline {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.jornal-corpo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+@media (min-width: 640px) {
+  .jornal-corpo {
+    grid-template-columns: 1.3fr 1fr;
+    gap: 24px;
+  }
+
+  /* Divisão central em duas colunas, igual ao modelo de referência — uma
+     linha fina separando o texto corrido (esquerda) dos gráficos/imagens
+     (direita). Só em telas largas: empilhado no celular não precisa de
+     divisor. */
+  .jornal-coluna-esquerda {
+    border-right: 1px solid var(--line);
+    padding-right: 24px;
+  }
+}
+
+.jornal-secao {
+  margin-bottom: 16px;
+}
+
+.jornal-secao-titulo {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--danger);
+  margin: 0 0 6px;
+}
+
+.jornal-secao p {
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--ink);
+}
+
+.jornal-imagens-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.jornal-imagem-item {
+  margin: 0;
+}
+
+.jornal-imagem-item img {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.jornal-imagem-item figcaption {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+.jornal-destaques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.jornal-destaque-card {
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.jornal-destaque-card .icone {
+  font-size: 18px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.jornal-destaque-badge-wrap {
+  position: relative;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.jornal-destaque-crowd {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 0;
+  opacity: 0.3;
+  font-size: 10px;
+  line-height: 1.1;
+  padding: 2px;
+}
+
+.jornal-destaque-badge {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 0 3px #fff;
+}
+
+.jornal-destaque-badge-wrap .amostra {
+  position: absolute;
+  bottom: 3px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--ink);
+  background: #fff;
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+
+.jornal-destaque-card .titulo {
+  font-size: 11.5px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+
+.jornal-destaque-card .linha {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.jornal-indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.jornal-indicador {
+  margin-bottom: 18px;
+}
+
+.jornal-indicador .titulo {
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 2px;
+  color: var(--ink);
+  text-align: center;
+}
+
+.jornal-indicador .descricao {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0 0 10px;
+}
+
+.jornal-grafico-painel {
+  display: flex;
+  gap: 6px;
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 10px 10px 0;
+}
+
+.jornal-grafico-eixo {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 90px;
+  font-size: 8px;
+  color: var(--muted);
+  padding-bottom: 19px;
+}
+
+.jornal-barra-grupo {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+  height: 90px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 8px;
+  background-image: repeating-linear-gradient(to top, var(--line) 0, var(--line) 1px, transparent 1px, transparent 25%);
+}
+
+.jornal-barra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  width: 58px;
+}
+
+.jornal-barra .valor {
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 1px;
+}
+
+.jornal-barra .subvalor {
+  font-size: 7.5px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 3px;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.jornal-barra .haste {
+  width: 28px;
+  border-radius: 4px 4px 0 0;
+}
+
+.jornal-barra .rotulo {
+  font-size: 9.5px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 6px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Gráfico de linha — reaproveita .jornal-grafico-painel/.jornal-grafico-eixo
+   dos gráficos de barra, mas sem o padding-bottom (não há "rótulo" de barra
+   consumindo espaço dentro da área de 90px: os ticks do eixo X ficam numa
+   linha própria abaixo do SVG). */
+.jornal-grafico-eixo.linha {
+  padding-bottom: 0;
+}
+
+.jornal-grafico-linha-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.jornal-grafico-linha-eixox {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--muted);
+  padding: 2px 2px 0;
+}
+
+.jornal-grafico-linha-rotulo-x {
+  text-align: center;
+  font-size: 8.5px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.jornal-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.jornal-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  color: var(--ink);
+}
+
+.jornal-legenda-item .ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.link-remover {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.jornal-rodape {
+  border-top: 1px solid var(--line);
+  padding: 12px 20px 16px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}

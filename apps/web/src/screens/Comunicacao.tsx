@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { JornalComposer, criarSecaoVazia, type SecaoJornal } from './comunicacao/JornalComposer';
 
 interface Comunidade {
   id: string;
@@ -13,6 +14,7 @@ const TEMPLATES = [
   { valor: 'lembrete_evento', rotulo: 'Lembrete de evento' },
   { valor: 'convite_evento', rotulo: 'Convite para evento' },
   { valor: 'resposta_demanda', rotulo: 'Resposta a demanda' },
+  { valor: 'jornal_medico', rotulo: 'Jornal' },
 ];
 
 const PUBLICOS = [
@@ -45,6 +47,14 @@ export function Comunicacao() {
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<ResultadoCampanha | null>(null);
   const [enviando, setEnviando] = useState(false);
+
+  // Rascunho do Jornal Médico fica fora do JornalComposer (que é só a view)
+  // pra sobreviver a fechar/reabrir a tela de montagem sem perder o que já
+  // foi digitado.
+  const [jornalAberto, setJornalAberto] = useState(false);
+  const [jornalTitulo, setJornalTitulo] = useState('');
+  const [jornalSubtitulo, setJornalSubtitulo] = useState('');
+  const [jornalSecoes, setJornalSecoes] = useState<SecaoJornal[]>([criarSecaoVazia()]);
 
   useEffect(() => {
     api
@@ -85,6 +95,25 @@ export function Comunicacao() {
     } finally {
       setEnviando(false);
     }
+  }
+
+  if (jornalAberto) {
+    return (
+      <JornalComposer
+        municipioNome={municipio?.nome ?? ''}
+        titulo={jornalTitulo}
+        subtitulo={jornalSubtitulo}
+        secoes={jornalSecoes}
+        onTituloChange={setJornalTitulo}
+        onSubtituloChange={setJornalSubtitulo}
+        onSecoesChange={setJornalSecoes}
+        onConcluir={(corpo) => {
+          setMensagem(corpo);
+          setJornalAberto(false);
+        }}
+        onCancelar={() => setJornalAberto(false)}
+      />
+    );
   }
 
   if (resultado) {
@@ -129,7 +158,22 @@ export function Comunicacao() {
       <p style={{ fontSize: 11.5, fontWeight: 700, margin: '0 0 6px' }}>Modelo</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
         {TEMPLATES.map((t) => (
-          <button key={t.valor} className={`chip ${template === t.valor ? 'active' : ''}`} onClick={() => setTemplate(t.valor)}>
+          <button
+            key={t.valor}
+            className={`chip ${template === t.valor ? 'active' : ''}`}
+            onClick={() => {
+              if (t.valor === 'jornal_medico') {
+                // Primeira vez trocando pra este modelo: limpa o texto genérico
+                // (ex: placeholder de aniversário) pra nunca enviar aquele
+                // conteúdo rotulado como Jornal se o usuário cancelar a
+                // montagem sem concluir. Reabrir pra editar (botão "Editar
+                // jornal") não passa por aqui, então não perde o que já foi montado.
+                if (template !== 'jornal_medico') setMensagem('');
+                setJornalAberto(true);
+              }
+              setTemplate(t.valor);
+            }}
+          >
             {t.rotulo}
           </button>
         ))}
@@ -168,7 +212,17 @@ export function Comunicacao() {
         </div>
       )}
 
-      <p style={{ fontSize: 11.5, fontWeight: 700, margin: '0 0 6px' }}>Mensagem</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 6px' }}>
+        <p style={{ fontSize: 11.5, fontWeight: 700, margin: 0 }}>Mensagem</p>
+        {template === 'jornal_medico' && (
+          <button
+            onClick={() => setJornalAberto(true)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: 11.5, fontWeight: 700 }}
+          >
+            ✏️ Editar jornal
+          </button>
+        )}
+      </div>
       <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={4} style={{ width: '100%' }} />
 
       {avisoRevisao && (

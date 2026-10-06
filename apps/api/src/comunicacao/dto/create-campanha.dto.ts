@@ -10,6 +10,7 @@ export enum TipoTemplate {
   LEMBRETE_EVENTO = 'lembrete_evento',
   CONVITE_EVENTO = 'convite_evento',
   RESPOSTA_DEMANDA = 'resposta_demanda',
+  JORNAL_MEDICO = 'jornal_medico',
 }
 
 export enum FinalidadeComunicacao {

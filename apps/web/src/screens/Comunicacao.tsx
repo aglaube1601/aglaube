@@ -7,6 +7,7 @@ import {
   type SecaoJornal,
   type DestaqueJornal,
   type GrupoIndicador,
+  type GrupoLinha,
 } from './comunicacao/JornalComposer';
 
 interface Comunidade {
@@ -39,7 +40,7 @@ interface ResultadoCampanha {
 }
 
 export function Comunicacao() {
-  const { municipio } = useAuth();
+  const { municipio, usuario } = useAuth();
   const [comunidades, setComunidades] = useState<Comunidade[]>([]);
   const [template, setTemplate] = useState('aniversario');
   const [publico, setPublico] = useState('aniversariantes_semana');
@@ -58,11 +59,17 @@ export function Comunicacao() {
   // pra sobreviver a fechar/reabrir a tela de montagem sem perder o que já
   // foi digitado.
   const [jornalAberto, setJornalAberto] = useState(false);
+  // A assinatura começa com o nome da conta logada, mas fica editável no
+  // composer — é a marca que deve ficar conhecida a cada edição (ver
+  // JornalComposer), então o profissional pode ajustar como quiser que
+  // apareça (ex: incluir "Dr./Dra.") sem precisar mudar o nome da conta.
+  const [jornalProfissionalNome, setJornalProfissionalNome] = useState(usuario?.nome ?? '');
   const [jornalTitulo, setJornalTitulo] = useState('');
   const [jornalSubtitulo, setJornalSubtitulo] = useState('');
   const [jornalSecoes, setJornalSecoes] = useState<SecaoJornal[]>([criarSecaoVazia()]);
   const [jornalDestaques, setJornalDestaques] = useState<DestaqueJornal[]>([]);
   const [jornalIndicadores, setJornalIndicadores] = useState<GrupoIndicador[]>([]);
+  const [jornalIndicadoresLinha, setJornalIndicadoresLinha] = useState<GrupoLinha[]>([]);
 
   useEffect(() => {
     api
@@ -108,17 +115,21 @@ export function Comunicacao() {
   if (jornalAberto) {
     return (
       <JornalComposer
+        profissionalNome={jornalProfissionalNome}
         municipioNome={municipio?.nome ?? ''}
         titulo={jornalTitulo}
         subtitulo={jornalSubtitulo}
         secoes={jornalSecoes}
         destaques={jornalDestaques}
         indicadores={jornalIndicadores}
+        indicadoresLinha={jornalIndicadoresLinha}
+        onProfissionalNomeChange={setJornalProfissionalNome}
         onTituloChange={setJornalTitulo}
         onSubtituloChange={setJornalSubtitulo}
         onSecoesChange={setJornalSecoes}
         onDestaquesChange={setJornalDestaques}
         onIndicadoresChange={setJornalIndicadores}
+        onIndicadoresLinhaChange={setJornalIndicadoresLinha}
         onConcluir={(corpo) => {
           setMensagem(corpo);
           setJornalAberto(false);

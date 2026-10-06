@@ -401,11 +401,20 @@ a {
   margin: 0 0 8px;
 }
 
-.jornal-masthead h2 {
-  font-size: 19px;
+.jornal-masthead h1 {
+  font-size: 23px;
   font-weight: 800;
+  margin: 0 0 6px;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+
+.jornal-masthead .jornal-topico-semana {
+  font-size: 13.5px;
+  font-weight: 600;
+  opacity: 0.92;
   margin: 0 0 8px;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 .jornal-masthead .byline {
@@ -528,6 +537,12 @@ a {
   color: var(--ink);
 }
 
+.jornal-indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
 .jornal-indicador {
   margin-bottom: 18px;
 }
@@ -614,6 +629,60 @@ a {
   margin-top: 6px;
   text-align: center;
   line-height: 1.2;
+}
+
+/* Gráfico de linha — reaproveita .jornal-grafico-painel/.jornal-grafico-eixo
+   dos gráficos de barra, mas sem o padding-bottom (não há "rótulo" de barra
+   consumindo espaço dentro da área de 90px: os ticks do eixo X ficam numa
+   linha própria abaixo do SVG). */
+.jornal-grafico-eixo.linha {
+  padding-bottom: 0;
+}
+
+.jornal-grafico-linha-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.jornal-grafico-linha-eixox {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--muted);
+  padding: 2px 2px 0;
+}
+
+.jornal-grafico-linha-rotulo-x {
+  text-align: center;
+  font-size: 8.5px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.jornal-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.jornal-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  color: var(--ink);
+}
+
+.jornal-legenda-item .ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .link-remover {

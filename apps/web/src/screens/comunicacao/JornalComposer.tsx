@@ -29,6 +29,27 @@ export interface GrupoIndicador {
   barras: BarraIndicador[];
 }
 
+export interface PontoLinha {
+  id: string;
+  x: number;
+  y: number; // 0-100
+}
+
+export interface SerieLinha {
+  id: string;
+  nome: string;
+  pontos: PontoLinha[];
+}
+
+export interface GrupoLinha {
+  id: string;
+  titulo: string;
+  descricao: string;
+  eixoXRotulo: string;
+  linhaReferencia: string; // valor opcional (ex: "50") pra uma linha horizontal tracejada
+  series: SerieLinha[];
+}
+
 const RODAPE_PADRAO =
   'Conteúdo informativo elaborado pela equipe de saúde — não substitui consulta médica. ' +
   'Em caso de sintomas, procure a unidade de saúde mais próxima.';
@@ -55,6 +76,25 @@ export function criarGrupoIndicadorVazio(): GrupoIndicador {
   return { id: criarId(), titulo: '', descricao: '', barras: [criarBarraVazia(), criarBarraVazia()] };
 }
 
+export function criarPontoVazio(x: number): PontoLinha {
+  return { id: criarId(), x, y: 0 };
+}
+
+export function criarSerieVazia(): SerieLinha {
+  return { id: criarId(), nome: '', pontos: [criarPontoVazio(0), criarPontoVazio(6), criarPontoVazio(12)] };
+}
+
+export function criarGrupoLinhaVazio(): GrupoLinha {
+  return {
+    id: criarId(),
+    titulo: '',
+    descricao: '',
+    eixoXRotulo: 'Meses',
+    linhaReferencia: '',
+    series: [criarSerieVazia(), criarSerieVazia()],
+  };
+}
+
 function formatarDataBr(data: Date): string {
   return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
@@ -71,10 +111,16 @@ function obterIntervaloSemanaAtual(): { inicio: Date; fim: Date } {
   return { inicio, fim };
 }
 
-export function montarCabecalhoPadrao(municipioNome: string): string {
+// O nome do profissional é a "marca" recorrente do boletim (equivalente ao
+// nome da revista no modelo de referência) — é o que deve ficar conhecido
+// semana após semana, então vem em destaque tanto aqui quanto no masthead
+// visual (ver JornalVisual). Nunca fica em branco pro envio de texto: cai
+// no genérico "Boletim de Saúde" se o profissional não estiver identificado.
+export function montarCabecalhoPadrao(profissionalNome: string, municipioNome: string): string {
   const { inicio, fim } = obterIntervaloSemanaAtual();
-  const nomeMunicipio = municipioNome.trim() ? ` — ${municipioNome.toUpperCase()}` : '';
-  return `🩺 *BOLETIM DE SAÚDE${nomeMunicipio}*\nEdição semanal informativa • ${formatarDataBr(inicio)} a ${formatarDataBr(fim)}`;
+  const nome = profissionalNome.trim() || 'Boletim de Saúde';
+  const local = municipioNome.trim() ? ` — ${municipioNome.toUpperCase()}` : '';
+  return `🩺 *${nome.toUpperCase()}*${local}\nBoletim de Saúde Semanal • ${formatarDataBr(inicio)} a ${formatarDataBr(fim)}`;
 }
 
 function formatarEdicao(): string {
@@ -87,14 +133,16 @@ function formatarEdicao(): string {
 // JornalVisual é o formato "de verdade"; isto é o retrocesso que ainda
 // carrega os dados principais quando só a mensagem de texto é enviada.
 export function montarCorpoJornal(params: {
+  profissionalNome: string;
   municipioNome: string;
   titulo: string;
   subtitulo: string;
   secoes: SecaoJornal[];
   destaques: DestaqueJornal[];
   indicadores: GrupoIndicador[];
+  indicadoresLinha: GrupoLinha[];
 }): string {
-  const partes: string[] = [montarCabecalhoPadrao(params.municipioNome), ''];
+  const partes: string[] = [montarCabecalhoPadrao(params.profissionalNome, params.municipioNome), ''];
 
   if (params.titulo.trim()) partes.push(`*${params.titulo.trim()}*`);
   if (params.subtitulo.trim()) partes.push(`_${params.subtitulo.trim()}_`);
@@ -127,6 +175,18 @@ export function montarCorpoJornal(params: {
     partes.push('');
   }
 
+  for (const grupo of params.indicadoresLinha) {
+    const seriesValidas = grupo.series.filter((s) => s.nome.trim() && s.pontos.length > 0);
+    if (!grupo.titulo.trim() && seriesValidas.length === 0) continue;
+    if (grupo.titulo.trim()) partes.push(`*${grupo.titulo.trim()}*`);
+    if (grupo.descricao.trim()) partes.push(grupo.descricao.trim());
+    for (const serie of seriesValidas) {
+      const ultimo = [...serie.pontos].sort((a, b) => a.x - b.x).slice(-1)[0];
+      partes.push(`• ${serie.nome.trim()}: ${ultimo.y}% (${grupo.eixoXRotulo.trim() || 'x'} = ${ultimo.x})`);
+    }
+    partes.push('');
+  }
+
   partes.push('—');
   partes.push(RODAPE_PADRAO);
 
@@ -134,31 +194,43 @@ export function montarCorpoJornal(params: {
 }
 
 interface JornalVisualProps {
+  profissionalNome: string;
   municipioNome: string;
   titulo: string;
   subtitulo: string;
   secoes: SecaoJornal[];
   destaques: DestaqueJornal[];
   indicadores: GrupoIndicador[];
+  indicadoresLinha: GrupoLinha[];
 }
 
 // Cartaz visual do Jornal — layout inspirado no "Research Summary" do NEJM
 // (banner com nome da publicação, título, colunas com cabeçalhos em
 // vermelho e cartões de destaque/indicadores à direita). É o próprio
 // componente capturado como PNG pelo botão "Baixar imagem".
+//
+// O NOME DO PROFISSIONAL é quem ocupa o lugar de maior destaque no
+// masthead (equivalente a "The New England Journal of Medicine" no
+// modelo) — é a marca recorrente que deve ficar conhecida a cada edição.
+// O título digitado pra semana vira o "tópico" abaixo do nome, papel
+// equivalente ao título do artigo no modelo original.
 export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(function JornalVisual(
-  { municipioNome, titulo, subtitulo, secoes, destaques, indicadores },
+  { profissionalNome, municipioNome, titulo, subtitulo, secoes, destaques, indicadores, indicadoresLinha },
   ref,
 ) {
   const secoesPreenchidas = secoes.filter((s) => s.corpo.trim());
   const destaquesPreenchidos = destaques.filter((d) => d.titulo.trim() || d.corpo.trim());
   const indicadoresPreenchidos = indicadores.filter((g) => g.barras.some((b) => b.rotulo.trim()));
+  const indicadoresLinhaPreenchidos = indicadoresLinha.filter((g) =>
+    g.series.some((s) => s.nome.trim() && s.pontos.length > 0),
+  );
 
   return (
     <div ref={ref} className="jornal-visual">
       <div className="jornal-masthead">
-        <p className="eyebrow">🩺 Boletim de Saúde{municipioNome.trim() ? ` — ${municipioNome}` : ''}</p>
-        <h2>{titulo.trim() || 'Título do boletim'}</h2>
+        <p className="eyebrow">🩺 Boletim de Saúde Semanal{municipioNome.trim() ? ` — ${municipioNome}` : ''}</p>
+        <h1>{profissionalNome.trim() || 'Nome do profissional'}</h1>
+        <p className="jornal-topico-semana">{titulo.trim() || 'Título do boletim'}</p>
         <p className="byline">
           {subtitulo.trim() ? `${subtitulo.trim()} | ` : ''}
           {formatarEdicao()}
@@ -212,35 +284,43 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
             </div>
           )}
 
-          {indicadoresPreenchidos.map((grupo) => {
-            const barrasValidas = grupo.barras.filter((b) => b.rotulo.trim());
-            return (
-              <div key={grupo.id} className="jornal-indicador">
-                {grupo.titulo.trim() && <p className="titulo">{grupo.titulo}</p>}
-                {grupo.descricao.trim() && <p className="descricao">{grupo.descricao}</p>}
-                <div className="jornal-grafico-painel">
-                  <div className="jornal-grafico-eixo" aria-hidden>
-                    {[100, 75, 50, 25, 0].map((v) => (
-                      <span key={v}>{v}</span>
-                    ))}
-                  </div>
-                  <div className="jornal-barra-grupo">
-                    {barrasValidas.map((barra, i) => (
-                      <div key={barra.id} className="jornal-barra">
-                        <span className="valor">{barra.valor}%</span>
-                        {barra.subvalor.trim() && <span className="subvalor">{barra.subvalor}</span>}
-                        <div
-                          className="haste"
-                          style={{ height: `${Math.max(barra.valor, 3)}%`, background: CORES_BARRA[i % CORES_BARRA.length] }}
-                        />
-                        <span className="rotulo">{barra.rotulo}</span>
+          {indicadoresPreenchidos.length > 0 && (
+            <div className="jornal-indicadores-grid">
+              {indicadoresPreenchidos.map((grupo) => {
+                const barrasValidas = grupo.barras.filter((b) => b.rotulo.trim());
+                return (
+                  <div key={grupo.id} className="jornal-indicador">
+                    {grupo.titulo.trim() && <p className="titulo">{grupo.titulo}</p>}
+                    {grupo.descricao.trim() && <p className="descricao">{grupo.descricao}</p>}
+                    <div className="jornal-grafico-painel">
+                      <div className="jornal-grafico-eixo" aria-hidden>
+                        {[100, 75, 50, 25, 0].map((v) => (
+                          <span key={v}>{v}</span>
+                        ))}
                       </div>
-                    ))}
+                      <div className="jornal-barra-grupo">
+                        {barrasValidas.map((barra, i) => (
+                          <div key={barra.id} className="jornal-barra">
+                            <span className="valor">{barra.valor}%</span>
+                            {barra.subvalor.trim() && <span className="subvalor">{barra.subvalor}</span>}
+                            <div
+                              className="haste"
+                              style={{ height: `${Math.max(barra.valor, 3)}%`, background: CORES_BARRA[i % CORES_BARRA.length] }}
+                            />
+                            <span className="rotulo">{barra.rotulo}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
+
+          {indicadoresLinhaPreenchidos.map((grupo) => (
+            <GraficoLinha key={grupo.id} grupo={grupo} />
+          ))}
         </div>
       </div>
 
@@ -249,34 +329,141 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
   );
 });
 
+// Gráfico de linha em degraus (estilo curva de sobrevida/Kaplan-Meier do
+// modelo de referência) — cada série desenha um "step-after": segura o
+// valor até o próximo ponto, depois degrau. Eixo Y fixo 0-100 (mesma
+// escala dos gráficos de barra, pra manter os indicadores comparáveis).
+function GraficoLinha({ grupo }: { grupo: GrupoLinha }) {
+  const seriesValidas = grupo.series.filter((s) => s.nome.trim() && s.pontos.length >= 2);
+  if (seriesValidas.length === 0) return null;
+
+  const LARGURA = 260;
+  const ALTURA = 90;
+  const todosX = seriesValidas.flatMap((s) => s.pontos.map((p) => p.x));
+  const minX = Math.min(...todosX);
+  const maxX = Math.max(...todosX, minX + 1);
+
+  function px(x: number) {
+    return ((x - minX) / (maxX - minX)) * LARGURA;
+  }
+  function py(y: number) {
+    return ALTURA - (Math.min(Math.max(y, 0), 100) / 100) * ALTURA;
+  }
+
+  const refY = Number(grupo.linhaReferencia);
+  const temReferencia = grupo.linhaReferencia.trim() !== '' && !Number.isNaN(refY);
+  const xTicks = Array.from(new Set(todosX)).sort((a, b) => a - b);
+
+  return (
+    <div className="jornal-indicador">
+      {grupo.titulo.trim() && <p className="titulo">{grupo.titulo}</p>}
+      {grupo.descricao.trim() && <p className="descricao">{grupo.descricao}</p>}
+      <div className="jornal-grafico-painel">
+        <div className="jornal-grafico-eixo linha" aria-hidden>
+          {[100, 75, 50, 25, 0].map((v) => (
+            <span key={v}>{v}</span>
+          ))}
+        </div>
+        <div className="jornal-grafico-linha-area">
+          <svg viewBox={`0 0 ${LARGURA} ${ALTURA}`} width="100%" height={ALTURA} preserveAspectRatio="none">
+            {[0, 25, 50, 75, 100].map((v) => (
+              <line key={v} x1={0} x2={LARGURA} y1={py(v)} y2={py(v)} style={{ stroke: 'var(--line)' }} strokeWidth={1} />
+            ))}
+            {temReferencia && (
+              <line
+                x1={0}
+                x2={LARGURA}
+                y1={py(refY)}
+                y2={py(refY)}
+                style={{ stroke: 'var(--muted)' }}
+                strokeWidth={1}
+                strokeDasharray="4 3"
+              />
+            )}
+            {seriesValidas.map((serie, i) => {
+              const pontosOrdenados = [...serie.pontos].sort((a, b) => a.x - b.x);
+              let d = '';
+              pontosOrdenados.forEach((p, idx) => {
+                if (idx === 0) {
+                  d += `M ${px(p.x)} ${py(p.y)} `;
+                } else {
+                  const anterior = pontosOrdenados[idx - 1];
+                  d += `L ${px(p.x)} ${py(anterior.y)} L ${px(p.x)} ${py(p.y)} `;
+                }
+              });
+              return (
+                <path
+                  key={serie.id}
+                  d={d.trim()}
+                  fill="none"
+                  style={{ stroke: CORES_BARRA[i % CORES_BARRA.length] }}
+                  strokeWidth={2.2}
+                  strokeLinejoin="round"
+                />
+              );
+            })}
+          </svg>
+          <div className="jornal-grafico-linha-eixox">
+            {xTicks.map((x) => (
+              <span key={x}>{x}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+      {grupo.eixoXRotulo.trim() && <p className="jornal-grafico-linha-rotulo-x">{grupo.eixoXRotulo}</p>}
+      <div className="jornal-legenda">
+        {seriesValidas.map((serie, i) => {
+          const ultimo = [...serie.pontos].sort((a, b) => a.x - b.x).slice(-1)[0];
+          return (
+            <div key={serie.id} className="jornal-legenda-item">
+              <span className="ponto" style={{ background: CORES_BARRA[i % CORES_BARRA.length] }} />
+              <span>
+                <strong>{ultimo.y}%</strong> {serie.nome}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 interface JornalComposerProps {
+  profissionalNome: string;
   municipioNome: string;
   titulo: string;
   subtitulo: string;
   secoes: SecaoJornal[];
   destaques: DestaqueJornal[];
   indicadores: GrupoIndicador[];
+  indicadoresLinha: GrupoLinha[];
+  onProfissionalNomeChange: (valor: string) => void;
   onTituloChange: (valor: string) => void;
   onSubtituloChange: (valor: string) => void;
   onSecoesChange: (secoes: SecaoJornal[]) => void;
   onDestaquesChange: (destaques: DestaqueJornal[]) => void;
   onIndicadoresChange: (indicadores: GrupoIndicador[]) => void;
+  onIndicadoresLinhaChange: (indicadoresLinha: GrupoLinha[]) => void;
   onConcluir: (corpoMensagem: string) => void;
   onCancelar: () => void;
 }
 
 export function JornalComposer({
+  profissionalNome,
   municipioNome,
   titulo,
   subtitulo,
   secoes,
   destaques,
   indicadores,
+  indicadoresLinha,
+  onProfissionalNomeChange,
   onTituloChange,
   onSubtituloChange,
   onSecoesChange,
   onDestaquesChange,
   onIndicadoresChange,
+  onIndicadoresLinhaChange,
   onConcluir,
   onCancelar,
 }: JornalComposerProps) {
@@ -285,8 +472,18 @@ export function JornalComposer({
   const visualRef = useRef<HTMLDivElement>(null);
 
   const corpoTexto = useMemo(
-    () => montarCorpoJornal({ municipioNome, titulo, subtitulo, secoes, destaques, indicadores }),
-    [municipioNome, titulo, subtitulo, secoes, destaques, indicadores],
+    () =>
+      montarCorpoJornal({
+        profissionalNome,
+        municipioNome,
+        titulo,
+        subtitulo,
+        secoes,
+        destaques,
+        indicadores,
+        indicadoresLinha,
+      }),
+    [profissionalNome, municipioNome, titulo, subtitulo, secoes, destaques, indicadores, indicadoresLinha],
   );
 
   function atualizarSecao(id: string, campo: 'titulo' | 'corpo', valor: string) {
@@ -329,6 +526,72 @@ export function JornalComposer({
     onIndicadoresChange(indicadores.filter((g) => g.id !== id));
   }
 
+  function atualizarGrupoLinha(id: string, campo: 'titulo' | 'descricao' | 'eixoXRotulo' | 'linhaReferencia', valor: string) {
+    onIndicadoresLinhaChange(indicadoresLinha.map((g) => (g.id === id ? { ...g, [campo]: valor } : g)));
+  }
+
+  function atualizarSerie(grupoId: string, serieId: string, nome: string) {
+    onIndicadoresLinhaChange(
+      indicadoresLinha.map((g) =>
+        g.id === grupoId ? { ...g, series: g.series.map((s) => (s.id === serieId ? { ...s, nome } : s)) } : g,
+      ),
+    );
+  }
+
+  function atualizarPonto(grupoId: string, serieId: string, pontoId: string, campo: 'x' | 'y', valor: string) {
+    const numero = Math.max(campo === 'y' ? 0 : -Infinity, campo === 'y' ? Math.min(100, Number(valor) || 0) : Number(valor) || 0);
+    onIndicadoresLinhaChange(
+      indicadoresLinha.map((g) =>
+        g.id === grupoId
+          ? {
+              ...g,
+              series: g.series.map((s) =>
+                s.id === serieId
+                  ? { ...s, pontos: s.pontos.map((p) => (p.id === pontoId ? { ...p, [campo]: numero } : p)) }
+                  : s,
+              ),
+            }
+          : g,
+      ),
+    );
+  }
+
+  function adicionarPonto(grupoId: string, serieId: string) {
+    onIndicadoresLinhaChange(
+      indicadoresLinha.map((g) =>
+        g.id === grupoId
+          ? {
+              ...g,
+              series: g.series.map((s) => {
+                if (s.id !== serieId) return s;
+                const ultimoX = s.pontos.length > 0 ? Math.max(...s.pontos.map((p) => p.x)) : 0;
+                return { ...s, pontos: [...s.pontos, criarPontoVazio(ultimoX + 3)] };
+              }),
+            }
+          : g,
+      ),
+    );
+  }
+
+  function removerPonto(grupoId: string, serieId: string, pontoId: string) {
+    onIndicadoresLinhaChange(
+      indicadoresLinha.map((g) =>
+        g.id === grupoId
+          ? {
+              ...g,
+              series: g.series.map((s) =>
+                s.id === serieId && s.pontos.length > 2 ? { ...s, pontos: s.pontos.filter((p) => p.id !== pontoId) } : s,
+              ),
+            }
+          : g,
+      ),
+    );
+  }
+
+  function removerGrupoLinha(id: string) {
+    onIndicadoresLinhaChange(indicadoresLinha.filter((g) => g.id !== id));
+  }
+
   async function baixarImagem() {
     if (!visualRef.current) return;
     setErroImagem(null);
@@ -351,6 +614,15 @@ export function JornalComposer({
   return (
     <div style={{ padding: 16 }}>
       <h3 style={{ fontSize: 16, margin: '4px 0 14px' }}>Montar Jornal Médico</h3>
+
+      <div className="field">
+        <label>Assinatura do boletim (seu nome — é a marca que fica em destaque)</label>
+        <input
+          value={profissionalNome}
+          onChange={(e) => onProfissionalNomeChange(e.target.value)}
+          placeholder="Ex: Dr. Fulano de Tal"
+        />
+      </div>
 
       <div className="field">
         <label>Título</label>
@@ -521,17 +793,109 @@ export function JornalComposer({
       </button>
 
       <p className="section-title" style={{ margin: '0 0 6px' }}>
+        Gráfico de linha / evolução no tempo (opcional)
+      </p>
+      {indicadoresLinha.map((grupo, indiceGrupo) => (
+        <div key={grupo.id} className="card" style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)' }}>Linha {indiceGrupo + 1}</span>
+            <button onClick={() => removerGrupoLinha(grupo.id)} className="link-remover">
+              Remover
+            </button>
+          </div>
+          <input
+            value={grupo.titulo}
+            onChange={(e) => atualizarGrupoLinha(grupo.id, 'titulo', e.target.value)}
+            placeholder="Título (ex: Casos notificados ao longo do ano)"
+            style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5, marginBottom: 8 }}
+          />
+          <input
+            value={grupo.descricao}
+            onChange={(e) => atualizarGrupoLinha(grupo.id, 'descricao', e.target.value)}
+            placeholder="Linha de apoio (opcional)"
+            style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5, marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <input
+              value={grupo.eixoXRotulo}
+              onChange={(e) => atualizarGrupoLinha(grupo.id, 'eixoXRotulo', e.target.value)}
+              placeholder="Rótulo do eixo X (ex: Semanas)"
+              style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
+            />
+            <input
+              value={grupo.linhaReferencia}
+              onChange={(e) => atualizarGrupoLinha(grupo.id, 'linhaReferencia', e.target.value)}
+              placeholder="Linha de ref. % (opcional)"
+              style={{ width: 150, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
+            />
+          </div>
+
+          {grupo.series.map((serie, indiceSerie) => (
+            <div key={serie.id} style={{ border: '1px solid var(--line)', borderRadius: 9, padding: 8, marginBottom: 8 }}>
+              <input
+                value={serie.nome}
+                onChange={(e) => atualizarSerie(grupo.id, serie.id, e.target.value)}
+                placeholder={`Nome da série ${indiceSerie + 1} (ex: Com tratamento)`}
+                style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '7px 10px', fontSize: 12, marginBottom: 6 }}
+              />
+              {serie.pontos.map((ponto) => (
+                <div key={ponto.id} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: 'var(--muted)', width: 14 }}>x</span>
+                  <input
+                    type="number"
+                    value={ponto.x}
+                    onChange={(e) => atualizarPonto(grupo.id, serie.id, ponto.id, 'x', e.target.value)}
+                    style={{ width: 60, border: '1px solid var(--line)', borderRadius: 9, padding: '6px 8px', fontSize: 12 }}
+                  />
+                  <span style={{ fontSize: 10, color: 'var(--muted)', width: 14 }}>y%</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={ponto.y}
+                    onChange={(e) => atualizarPonto(grupo.id, serie.id, ponto.id, 'y', e.target.value)}
+                    style={{ width: 60, border: '1px solid var(--line)', borderRadius: 9, padding: '6px 8px', fontSize: 12 }}
+                  />
+                  {serie.pontos.length > 2 && (
+                    <button onClick={() => removerPonto(grupo.id, serie.id, ponto.id)} className="link-remover" style={{ fontSize: 10 }}>
+                      Remover
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="btn btn-outline"
+                style={{ fontSize: 11, padding: '6px 0' }}
+                onClick={() => adicionarPonto(grupo.id, serie.id)}
+              >
+                + Adicionar ponto
+              </button>
+            </div>
+          ))}
+        </div>
+      ))}
+      <button
+        className="btn btn-outline"
+        onClick={() => onIndicadoresLinhaChange([...indicadoresLinha, criarGrupoLinhaVazio()])}
+        style={{ marginBottom: 18 }}
+      >
+        + Adicionar gráfico de linha
+      </button>
+
+      <p className="section-title" style={{ margin: '0 0 6px' }}>
         Pré-visualização do cartaz
       </p>
       <div style={{ marginBottom: 12 }}>
         <JornalVisual
           ref={visualRef}
+          profissionalNome={profissionalNome}
           municipioNome={municipioNome}
           titulo={titulo}
           subtitulo={subtitulo}
           secoes={secoes}
           destaques={destaques}
           indicadores={indicadores}
+          indicadoresLinha={indicadoresLinha}
         />
       </div>
 

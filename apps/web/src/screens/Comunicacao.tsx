@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { JornalComposer, criarSecaoVazia, type SecaoJornal } from './comunicacao/JornalComposer';
+import {
+  JornalComposer,
+  criarSecaoVazia,
+  type SecaoJornal,
+  type DestaqueJornal,
+  type GrupoIndicador,
+} from './comunicacao/JornalComposer';
 
 interface Comunidade {
   id: string;
@@ -55,6 +61,8 @@ export function Comunicacao() {
   const [jornalTitulo, setJornalTitulo] = useState('');
   const [jornalSubtitulo, setJornalSubtitulo] = useState('');
   const [jornalSecoes, setJornalSecoes] = useState<SecaoJornal[]>([criarSecaoVazia()]);
+  const [jornalDestaques, setJornalDestaques] = useState<DestaqueJornal[]>([]);
+  const [jornalIndicadores, setJornalIndicadores] = useState<GrupoIndicador[]>([]);
 
   useEffect(() => {
     api
@@ -104,9 +112,13 @@ export function Comunicacao() {
         titulo={jornalTitulo}
         subtitulo={jornalSubtitulo}
         secoes={jornalSecoes}
+        destaques={jornalDestaques}
+        indicadores={jornalIndicadores}
         onTituloChange={setJornalTitulo}
         onSubtituloChange={setJornalSubtitulo}
         onSecoesChange={setJornalSecoes}
+        onDestaquesChange={setJornalDestaques}
+        onIndicadoresChange={setJornalIndicadores}
         onConcluir={(corpo) => {
           setMensagem(corpo);
           setJornalAberto(false);

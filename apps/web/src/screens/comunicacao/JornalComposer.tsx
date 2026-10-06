@@ -50,6 +50,12 @@ export interface GrupoLinha {
   series: SerieLinha[];
 }
 
+export interface ImagemJornal {
+  id: string;
+  dataUrl: string;
+  legenda: string;
+}
+
 const RODAPE_PADRAO =
   'Conteúdo informativo elaborado pela equipe de saúde — não substitui consulta médica. ' +
   'Em caso de sintomas, procure a unidade de saúde mais próxima.';
@@ -93,6 +99,40 @@ export function criarGrupoLinhaVazio(): GrupoLinha {
     linhaReferencia: '',
     series: [criarSerieVazia(), criarSerieVazia()],
   };
+}
+
+// Redimensiona pra no máximo LARGURA_MAX_IMAGEM de largura antes de guardar
+// como data URL — uma foto direto da câmera do celular facilmente passa de
+// 4000px, o que deixaria o estado da página e o PNG final pesados demais à
+// toa (o cartaz nunca é exibido maior que ~700px).
+const LARGURA_MAX_IMAGEM = 700;
+
+function lerImagemComoDataUrl(arquivo: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+    leitor.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Arquivo não é uma imagem válida.'));
+      img.onload = () => {
+        const escala = Math.min(1, LARGURA_MAX_IMAGEM / img.width);
+        const largura = Math.round(img.width * escala);
+        const altura = Math.round(img.height * escala);
+        const canvas = document.createElement('canvas');
+        canvas.width = largura;
+        canvas.height = altura;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(leitor.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, largura, altura);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = leitor.result as string;
+    };
+    leitor.readAsDataURL(arquivo);
+  });
 }
 
 function formatarDataBr(data: Date): string {
@@ -141,6 +181,7 @@ export function montarCorpoJornal(params: {
   destaques: DestaqueJornal[];
   indicadores: GrupoIndicador[];
   indicadoresLinha: GrupoLinha[];
+  imagens: ImagemJornal[];
 }): string {
   const partes: string[] = [montarCabecalhoPadrao(params.profissionalNome, params.municipioNome), ''];
 
@@ -187,6 +228,11 @@ export function montarCorpoJornal(params: {
     partes.push('');
   }
 
+  if (params.imagens.length > 0) {
+    partes.push(`📎 ${params.imagens.length} imagem(ns) anexada(s) ao cartaz — ver imagem do boletim.`);
+    partes.push('');
+  }
+
   partes.push('—');
   partes.push(RODAPE_PADRAO);
 
@@ -202,6 +248,7 @@ interface JornalVisualProps {
   destaques: DestaqueJornal[];
   indicadores: GrupoIndicador[];
   indicadoresLinha: GrupoLinha[];
+  imagens: ImagemJornal[];
 }
 
 // Cartaz visual do Jornal — layout inspirado no "Research Summary" do NEJM
@@ -215,7 +262,7 @@ interface JornalVisualProps {
 // O título digitado pra semana vira o "tópico" abaixo do nome, papel
 // equivalente ao título do artigo no modelo original.
 export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(function JornalVisual(
-  { profissionalNome, municipioNome, titulo, subtitulo, secoes, destaques, indicadores, indicadoresLinha },
+  { profissionalNome, municipioNome, titulo, subtitulo, secoes, destaques, indicadores, indicadoresLinha, imagens },
   ref,
 ) {
   const secoesPreenchidas = secoes.filter((s) => s.corpo.trim());
@@ -238,7 +285,7 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
       </div>
 
       <div className="jornal-corpo">
-        <div>
+        <div className="jornal-coluna-esquerda">
           {secoesPreenchidas.length === 0 && (
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>O conteúdo das caixas de texto aparece aqui.</p>
           )}
@@ -250,7 +297,17 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
           ))}
         </div>
 
-        <div>
+        <div className="jornal-coluna-direita">
+          {imagens.length > 0 && (
+            <div className="jornal-imagens-bloco">
+              {imagens.map((imagem) => (
+                <figure key={imagem.id} className="jornal-imagem-item">
+                  <img src={imagem.dataUrl} alt={imagem.legenda || 'Imagem anexada'} />
+                  {imagem.legenda.trim() && <figcaption>{imagem.legenda}</figcaption>}
+                </figure>
+              ))}
+            </div>
+          )}
           {destaquesPreenchidos.length > 0 && (
             <div className="jornal-destaques-grid">
               {destaquesPreenchidos.map((destaque, i) => (
@@ -437,6 +494,7 @@ interface JornalComposerProps {
   destaques: DestaqueJornal[];
   indicadores: GrupoIndicador[];
   indicadoresLinha: GrupoLinha[];
+  imagens: ImagemJornal[];
   onProfissionalNomeChange: (valor: string) => void;
   onTituloChange: (valor: string) => void;
   onSubtituloChange: (valor: string) => void;
@@ -444,6 +502,7 @@ interface JornalComposerProps {
   onDestaquesChange: (destaques: DestaqueJornal[]) => void;
   onIndicadoresChange: (indicadores: GrupoIndicador[]) => void;
   onIndicadoresLinhaChange: (indicadoresLinha: GrupoLinha[]) => void;
+  onImagensChange: (imagens: ImagemJornal[]) => void;
   onConcluir: (corpoMensagem: string) => void;
   onCancelar: () => void;
 }
@@ -457,6 +516,7 @@ export function JornalComposer({
   destaques,
   indicadores,
   indicadoresLinha,
+  imagens,
   onProfissionalNomeChange,
   onTituloChange,
   onSubtituloChange,
@@ -464,11 +524,13 @@ export function JornalComposer({
   onDestaquesChange,
   onIndicadoresChange,
   onIndicadoresLinhaChange,
+  onImagensChange,
   onConcluir,
   onCancelar,
 }: JornalComposerProps) {
   const [baixando, setBaixando] = useState(false);
   const [erroImagem, setErroImagem] = useState<string | null>(null);
+  const [enviandoImagem, setEnviandoImagem] = useState(false);
   const visualRef = useRef<HTMLDivElement>(null);
 
   const corpoTexto = useMemo(
@@ -482,8 +544,9 @@ export function JornalComposer({
         destaques,
         indicadores,
         indicadoresLinha,
+        imagens,
       }),
-    [profissionalNome, municipioNome, titulo, subtitulo, secoes, destaques, indicadores, indicadoresLinha],
+    [profissionalNome, municipioNome, titulo, subtitulo, secoes, destaques, indicadores, indicadoresLinha, imagens],
   );
 
   function atualizarSecao(id: string, campo: 'titulo' | 'corpo', valor: string) {
@@ -592,6 +655,34 @@ export function JornalComposer({
     onIndicadoresLinhaChange(indicadoresLinha.filter((g) => g.id !== id));
   }
 
+  async function adicionarImagens(arquivos: FileList | null) {
+    if (!arquivos || arquivos.length === 0) return;
+    setErroImagem(null);
+    setEnviandoImagem(true);
+    try {
+      const novas = await Promise.all(
+        Array.from(arquivos).map(async (arquivo) => ({
+          id: criarId(),
+          dataUrl: await lerImagemComoDataUrl(arquivo),
+          legenda: '',
+        })),
+      );
+      onImagensChange([...imagens, ...novas]);
+    } catch {
+      setErroImagem('Não foi possível anexar uma das imagens. Tente novamente.');
+    } finally {
+      setEnviandoImagem(false);
+    }
+  }
+
+  function atualizarLegendaImagem(id: string, legenda: string) {
+    onImagensChange(imagens.map((img) => (img.id === id ? { ...img, legenda } : img)));
+  }
+
+  function removerImagem(id: string) {
+    onImagensChange(imagens.filter((img) => img.id !== id));
+  }
+
   async function baixarImagem() {
     if (!visualRef.current) return;
     setErroImagem(null);
@@ -673,6 +764,42 @@ export function JornalComposer({
       <button className="btn btn-outline" onClick={() => onSecoesChange([...secoes, criarSecaoVazia()])} style={{ marginBottom: 18 }}>
         + Adicionar caixa de texto
       </button>
+
+      <p className="section-title" style={{ margin: '0 0 6px' }}>
+        Imagens e gráficos (coluna direita — anexe o que já tiver pronto)
+      </p>
+      {imagens.map((imagem, indice) => (
+        <div key={imagem.id} className="card" style={{ marginBottom: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <img
+            src={imagem.dataUrl}
+            alt={`Anexo ${indice + 1}`}
+            style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
+          />
+          <input
+            value={imagem.legenda}
+            onChange={(e) => atualizarLegendaImagem(imagem.id, e.target.value)}
+            placeholder="Legenda (opcional)"
+            style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
+          />
+          <button onClick={() => removerImagem(imagem.id)} className="link-remover">
+            Remover
+          </button>
+        </div>
+      ))}
+      <label className="btn btn-outline" style={{ marginBottom: 18, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
+        {enviandoImagem ? 'Carregando…' : '+ Anexar imagem (gráfico, foto, print)'}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => {
+            adicionarImagens(e.target.files);
+            e.target.value = '';
+          }}
+          disabled={enviandoImagem}
+          style={{ display: 'none' }}
+        />
+      </label>
 
       <p className="section-title" style={{ margin: '0 0 6px' }}>
         Destaques (cartões à direita no cartaz — opcional)
@@ -896,6 +1023,7 @@ export function JornalComposer({
           destaques={destaques}
           indicadores={indicadores}
           indicadoresLinha={indicadoresLinha}
+          imagens={imagens}
         />
       </div>
 

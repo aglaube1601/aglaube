@@ -8,6 +8,7 @@ import {
   type DestaqueJornal,
   type GrupoIndicador,
   type GrupoLinha,
+  type ImagemJornal,
 } from './comunicacao/JornalComposer';
 
 interface Comunidade {
@@ -70,6 +71,7 @@ export function Comunicacao() {
   const [jornalDestaques, setJornalDestaques] = useState<DestaqueJornal[]>([]);
   const [jornalIndicadores, setJornalIndicadores] = useState<GrupoIndicador[]>([]);
   const [jornalIndicadoresLinha, setJornalIndicadoresLinha] = useState<GrupoLinha[]>([]);
+  const [jornalImagens, setJornalImagens] = useState<ImagemJornal[]>([]);
 
   useEffect(() => {
     api
@@ -123,6 +125,7 @@ export function Comunicacao() {
         destaques={jornalDestaques}
         indicadores={jornalIndicadores}
         indicadoresLinha={jornalIndicadoresLinha}
+        imagens={jornalImagens}
         onProfissionalNomeChange={setJornalProfissionalNome}
         onTituloChange={setJornalTitulo}
         onSubtituloChange={setJornalSubtitulo}
@@ -130,6 +133,7 @@ export function Comunicacao() {
         onDestaquesChange={setJornalDestaques}
         onIndicadoresChange={setJornalIndicadores}
         onIndicadoresLinhaChange={setJornalIndicadoresLinha}
+        onImagensChange={setJornalImagens}
         onConcluir={(corpo) => {
           setMensagem(corpo);
           setJornalAberto(false);

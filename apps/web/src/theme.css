@@ -432,6 +432,16 @@ a {
 @media (min-width: 640px) {
   .jornal-corpo {
     grid-template-columns: 1.3fr 1fr;
+    gap: 24px;
+  }
+
+  /* Divisão central em duas colunas, igual ao modelo de referência — uma
+     linha fina separando o texto corrido (esquerda) dos gráficos/imagens
+     (direita). Só em telas largas: empilhado no celular não precisa de
+     divisor. */
+  .jornal-coluna-esquerda {
+    border-right: 1px solid var(--line);
+    padding-right: 24px;
   }
 }
 
@@ -453,6 +463,31 @@ a {
   line-height: 1.55;
   margin: 0;
   color: var(--ink);
+}
+
+.jornal-imagens-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.jornal-imagem-item {
+  margin: 0;
+}
+
+.jornal-imagem-item img {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.jornal-imagem-item figcaption {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 4px;
 }
 
 .jornal-destaques-grid {

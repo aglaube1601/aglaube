@@ -12,12 +12,14 @@ export interface DestaqueJornal {
   icone: string;
   titulo: string;
   corpo: string;
+  amostra: string; // ex: "403" — exibido como selo "N = 403", estilo cartão de braço de estudo
 }
 
 export interface BarraIndicador {
   id: string;
   rotulo: string;
   valor: number; // 0-100
+  subvalor: string; // ex: "IC95%, 0,70–0,91" — linha menor abaixo do valor principal
 }
 
 export interface GrupoIndicador {
@@ -42,11 +44,11 @@ export function criarSecaoVazia(): SecaoJornal {
 }
 
 export function criarDestaqueVazio(): DestaqueJornal {
-  return { id: criarId(), icone: '📌', titulo: '', corpo: '' };
+  return { id: criarId(), icone: '📌', titulo: '', corpo: '', amostra: '' };
 }
 
 export function criarBarraVazia(): BarraIndicador {
-  return { id: criarId(), rotulo: '', valor: 50 };
+  return { id: criarId(), rotulo: '', valor: 50, subvalor: '' };
 }
 
 export function criarGrupoIndicadorVazio(): GrupoIndicador {
@@ -107,7 +109,8 @@ export function montarCorpoJornal(params: {
 
   for (const destaque of params.destaques) {
     if (!destaque.titulo.trim() && !destaque.corpo.trim()) continue;
-    partes.push(`${destaque.icone} *${destaque.titulo.trim()}*`);
+    const amostraTxt = destaque.amostra.trim() ? ` (N = ${destaque.amostra.trim()})` : '';
+    partes.push(`${destaque.icone} *${destaque.titulo.trim()}*${amostraTxt}`);
     if (destaque.corpo.trim()) partes.push(destaque.corpo.trim());
     partes.push('');
   }
@@ -116,8 +119,10 @@ export function montarCorpoJornal(params: {
     const barrasValidas = grupo.barras.filter((b) => b.rotulo.trim());
     if (!grupo.titulo.trim() && barrasValidas.length === 0) continue;
     if (grupo.titulo.trim()) partes.push(`*${grupo.titulo.trim()}*`);
+    if (grupo.descricao.trim()) partes.push(grupo.descricao.trim());
     for (const barra of barrasValidas) {
-      partes.push(`• ${barra.rotulo.trim()}: ${barra.valor}%`);
+      const subTxt = barra.subvalor.trim() ? ` (${barra.subvalor.trim()})` : '';
+      partes.push(`• ${barra.rotulo.trim()}: ${barra.valor}%${subTxt}`);
     }
     partes.push('');
   }
@@ -176,15 +181,29 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
         <div>
           {destaquesPreenchidos.length > 0 && (
             <div className="jornal-destaques-grid">
-              {destaquesPreenchidos.map((destaque) => (
+              {destaquesPreenchidos.map((destaque, i) => (
                 <div key={destaque.id} className="jornal-destaque-card">
-                  <span className="icone">{destaque.icone || '📌'}</span>
+                  {destaque.amostra.trim() ? (
+                    <div className="jornal-destaque-badge-wrap">
+                      <div className="jornal-destaque-crowd" aria-hidden>
+                        {Array.from({ length: 24 }).map((_, j) => (
+                          <span key={j}>🧍</span>
+                        ))}
+                      </div>
+                      <div className="jornal-destaque-badge" style={{ background: CORES_BARRA[i % CORES_BARRA.length] }}>
+                        {destaque.icone || '💊'}
+                      </div>
+                      <span className="amostra">N = {destaque.amostra.trim()}</span>
+                    </div>
+                  ) : (
+                    <span className="icone">{destaque.icone || '📌'}</span>
+                  )}
                   <p className="titulo">{destaque.titulo}</p>
                   {destaque.corpo
                     .split('\n')
                     .filter((linha) => linha.trim())
-                    .map((linha, i) => (
-                      <p key={i} className="linha">
+                    .map((linha, j) => (
+                      <p key={j} className="linha">
                         {linha}
                       </p>
                     ))}
@@ -195,22 +214,29 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
 
           {indicadoresPreenchidos.map((grupo) => {
             const barrasValidas = grupo.barras.filter((b) => b.rotulo.trim());
-            const maior = Math.max(...barrasValidas.map((b) => b.valor), 1);
             return (
               <div key={grupo.id} className="jornal-indicador">
                 {grupo.titulo.trim() && <p className="titulo">{grupo.titulo}</p>}
                 {grupo.descricao.trim() && <p className="descricao">{grupo.descricao}</p>}
-                <div className="jornal-barra-grupo">
-                  {barrasValidas.map((barra, i) => (
-                    <div key={barra.id} className="jornal-barra">
-                      <span className="valor">{barra.valor}%</span>
-                      <div
-                        className="haste"
-                        style={{ height: `${Math.max((barra.valor / maior) * 100, 4)}%`, background: CORES_BARRA[i % CORES_BARRA.length] }}
-                      />
-                      <span className="rotulo">{barra.rotulo}</span>
-                    </div>
-                  ))}
+                <div className="jornal-grafico-painel">
+                  <div className="jornal-grafico-eixo" aria-hidden>
+                    {[100, 75, 50, 25, 0].map((v) => (
+                      <span key={v}>{v}</span>
+                    ))}
+                  </div>
+                  <div className="jornal-barra-grupo">
+                    {barrasValidas.map((barra, i) => (
+                      <div key={barra.id} className="jornal-barra">
+                        <span className="valor">{barra.valor}%</span>
+                        {barra.subvalor.trim() && <span className="subvalor">{barra.subvalor}</span>}
+                        <div
+                          className="haste"
+                          style={{ height: `${Math.max(barra.valor, 3)}%`, background: CORES_BARRA[i % CORES_BARRA.length] }}
+                        />
+                        <span className="rotulo">{barra.rotulo}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             );
@@ -272,7 +298,7 @@ export function JornalComposer({
     onSecoesChange(secoes.filter((s) => s.id !== id));
   }
 
-  function atualizarDestaque(id: string, campo: 'icone' | 'titulo' | 'corpo', valor: string) {
+  function atualizarDestaque(id: string, campo: 'icone' | 'titulo' | 'corpo' | 'amostra', valor: string) {
     onDestaquesChange(destaques.map((d) => (d.id === id ? { ...d, [campo]: valor } : d)));
   }
 
@@ -284,7 +310,7 @@ export function JornalComposer({
     onIndicadoresChange(indicadores.map((g) => (g.id === id ? { ...g, [campo]: valor } : g)));
   }
 
-  function atualizarBarra(grupoId: string, barraId: string, campo: 'rotulo' | 'valor', valor: string) {
+  function atualizarBarra(grupoId: string, barraId: string, campo: 'rotulo' | 'valor' | 'subvalor', valor: string) {
     onIndicadoresChange(
       indicadores.map((g) =>
         g.id === grupoId
@@ -401,6 +427,12 @@ export function JornalComposer({
               placeholder="Ex: Onde se vacinar"
               style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
             />
+            <input
+              value={destaque.amostra}
+              onChange={(e) => atualizarDestaque(destaque.id, 'amostra', e.target.value)}
+              placeholder="N (opcional)"
+              style={{ width: 90, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
+            />
           </div>
           <textarea
             value={destaque.corpo}
@@ -409,6 +441,10 @@ export function JornalComposer({
             rows={3}
             style={{ width: '100%' }}
           />
+          <p style={{ fontSize: 10, color: 'var(--muted)', margin: '6px 0 0' }}>
+            Preenchendo "N", o cartão ganha o selo circular com ícone e a textura de pessoas, como nos cartões de
+            braço de estudo do NEJM. Deixe em branco pra um cartão simples (tipo "Patients").
+          </p>
         </div>
       ))}
       <button className="btn btn-outline" onClick={() => onDestaquesChange([...destaques, criarDestaqueVazio()])} style={{ marginBottom: 18 }}>
@@ -432,6 +468,12 @@ export function JornalComposer({
             placeholder="Título do gráfico (ex: Cobertura vacinal)"
             style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5, marginBottom: 8 }}
           />
+          <input
+            value={grupo.descricao}
+            onChange={(e) => atualizarGrupoIndicador(grupo.id, 'descricao', e.target.value)}
+            placeholder="Linha de apoio (ex: Diferença ajustada, 31 pontos percentuais; P<0,001)"
+            style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5, marginBottom: 8 }}
+          />
           {grupo.barras.map((barra) => (
             <div key={barra.id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
               <input
@@ -446,9 +488,15 @@ export function JornalComposer({
                 max={100}
                 value={barra.valor}
                 onChange={(e) => atualizarBarra(grupo.id, barra.id, 'valor', e.target.value)}
-                style={{ width: 70, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
+                style={{ width: 60, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 12.5 }}
               />
               <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--muted)' }}>%</span>
+              <input
+                value={barra.subvalor}
+                onChange={(e) => atualizarBarra(grupo.id, barra.id, 'subvalor', e.target.value)}
+                placeholder="IC95% (opcional)"
+                style={{ width: 110, border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 11.5 }}
+              />
             </div>
           ))}
           <button

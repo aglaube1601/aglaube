@@ -433,6 +433,12 @@ a {
   font-size: 25px;
 }
 
+.jc-logo-foto {
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--veryhigh);
+}
+
 .jc-marca h1 {
   font-size: 25px;
   font-weight: 800;
@@ -514,8 +520,15 @@ a {
   margin: 0;
 }
 
+/* Moldura padronizada: aceita qualquer foto (vertical, horizontal,
+   quadrada) mas sempre encaixa numa proporção 4:3 fixa, cortando o
+   excesso (object-fit: cover) — assim os blocos de notícia ficam
+   alinhados como no modelo de referência, em vez de cada foto esticar o
+   bloco numa altura diferente conforme a proporção original do arquivo. */
 .jc-figura img {
   width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
   display: block;
   border-radius: 8px;
 }

@@ -62,6 +62,7 @@ export function Comunicacao() {
   // JornalComposer), então o profissional pode ajustar como quiser que
   // apareça (ex: incluir "Dr./Dra.") sem precisar mudar o nome da conta.
   const [jornalProfissionalNome, setJornalProfissionalNome] = useState(usuario?.nome ?? '');
+  const [jornalFotoPerfil, setJornalFotoPerfil] = useState('');
   const [jornalMaterias, setJornalMaterias] = useState<MateriaJornal[]>([criarMateriaVazia()]);
   const [jornalDestaquesRapidos, setJornalDestaquesRapidos] = useState<DestaqueRapido[]>([]);
 
@@ -111,9 +112,11 @@ export function Comunicacao() {
       <JornalComposer
         profissionalNome={jornalProfissionalNome}
         municipioNome={municipio?.nome ?? ''}
+        fotoPerfilDataUrl={jornalFotoPerfil}
         materias={jornalMaterias}
         destaquesRapidos={jornalDestaquesRapidos}
         onProfissionalNomeChange={setJornalProfissionalNome}
+        onFotoPerfilChange={setJornalFotoPerfil}
         onMateriasChange={setJornalMaterias}
         onDestaquesRapidosChange={setJornalDestaquesRapidos}
         onConcluir={(corpo) => {

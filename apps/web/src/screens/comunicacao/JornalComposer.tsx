@@ -135,6 +135,7 @@ export function montarCorpoJornal(params: {
 interface JornalVisualProps {
   profissionalNome: string;
   municipioNome: string;
+  fotoPerfilDataUrl: string;
   materias: MateriaJornal[];
   destaquesRapidos: DestaqueRapido[];
 }
@@ -145,7 +146,7 @@ interface JornalVisualProps {
 // o espaço que seria do "continua na pág. X" vira o próprio texto da
 // notícia. É o próprio componente capturado como PNG/PDF pelo composer.
 export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(function JornalVisual(
-  { profissionalNome, municipioNome, materias, destaquesRapidos },
+  { profissionalNome, municipioNome, fotoPerfilDataUrl, materias, destaquesRapidos },
   ref,
 ) {
   const materiasPreenchidas = materias.filter((m) => m.titulo.trim() || m.corpo.trim());
@@ -156,7 +157,11 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
       <div className="jc-masthead">
         <p className="jc-edicao">{formatarEdicao()}</p>
         <div className="jc-marca">
-          <span className="jc-logo">🩺</span>
+          {fotoPerfilDataUrl ? (
+            <img className="jc-logo jc-logo-foto" src={fotoPerfilDataUrl} alt={profissionalNome || 'Foto do profissional'} />
+          ) : (
+            <span className="jc-logo">🩺</span>
+          )}
           <div>
             <h1>{profissionalNome.trim() || 'Nome do profissional'}</h1>
             <span className="jc-tagline">Boletim de Saúde{municipioNome.trim() ? ` — ${municipioNome}` : ''}</span>
@@ -207,9 +212,11 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
 interface JornalComposerProps {
   profissionalNome: string;
   municipioNome: string;
+  fotoPerfilDataUrl: string;
   materias: MateriaJornal[];
   destaquesRapidos: DestaqueRapido[];
   onProfissionalNomeChange: (valor: string) => void;
+  onFotoPerfilChange: (dataUrl: string) => void;
   onMateriasChange: (materias: MateriaJornal[]) => void;
   onDestaquesRapidosChange: (destaques: DestaqueRapido[]) => void;
   onConcluir: (corpoMensagem: string) => void;
@@ -219,9 +226,11 @@ interface JornalComposerProps {
 export function JornalComposer({
   profissionalNome,
   municipioNome,
+  fotoPerfilDataUrl,
   materias,
   destaquesRapidos,
   onProfissionalNomeChange,
+  onFotoPerfilChange,
   onMateriasChange,
   onDestaquesRapidosChange,
   onConcluir,
@@ -230,12 +239,27 @@ export function JornalComposer({
   const [baixando, setBaixando] = useState<'png' | 'pdf' | null>(null);
   const [erroExportacao, setErroExportacao] = useState<string | null>(null);
   const [enviandoImagemId, setEnviandoImagemId] = useState<string | null>(null);
+  const [enviandoFotoPerfil, setEnviandoFotoPerfil] = useState(false);
   const visualRef = useRef<HTMLDivElement>(null);
 
   const corpoTexto = useMemo(
     () => montarCorpoJornal({ profissionalNome, municipioNome, materias, destaquesRapidos }),
     [profissionalNome, municipioNome, materias, destaquesRapidos],
   );
+
+  async function anexarFotoPerfil(arquivos: FileList | null) {
+    const arquivo = arquivos?.[0];
+    if (!arquivo) return;
+    setErroExportacao(null);
+    setEnviandoFotoPerfil(true);
+    try {
+      onFotoPerfilChange(await lerImagemComoDataUrl(arquivo));
+    } catch {
+      setErroExportacao('Não foi possível anexar a foto. Tente novamente.');
+    } finally {
+      setEnviandoFotoPerfil(false);
+    }
+  }
 
   function atualizarMateria(id: string, campo: 'categoria' | 'titulo' | 'corpo' | 'imagemLegenda', valor: string) {
     onMateriasChange(materias.map((m) => (m.id === id ? { ...m, [campo]: valor } : m)));
@@ -337,6 +361,37 @@ export function JornalComposer({
           onChange={(e) => onProfissionalNomeChange(e.target.value)}
           placeholder="Ex: Dr. Fulano de Tal"
         />
+      </div>
+
+      <div className="field">
+        <label>Sua foto (aparece no círculo ao lado do seu nome — opcional)</label>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {fotoPerfilDataUrl && (
+            <img
+              src={fotoPerfilDataUrl}
+              alt="Prévia da sua foto"
+              style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: '50%', flexShrink: 0 }}
+            />
+          )}
+          <label className="btn btn-outline" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', fontSize: 12 }}>
+            {enviandoFotoPerfil ? 'Carregando…' : fotoPerfilDataUrl ? 'Trocar foto' : '+ Anexar sua foto'}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                anexarFotoPerfil(e.target.files);
+                e.target.value = '';
+              }}
+              disabled={enviandoFotoPerfil}
+              style={{ display: 'none' }}
+            />
+          </label>
+          {fotoPerfilDataUrl && (
+            <button onClick={() => onFotoPerfilChange('')} className="link-remover">
+              Remover
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="section-title" style={{ margin: '0 0 6px' }}>
@@ -451,6 +506,7 @@ export function JornalComposer({
           ref={visualRef}
           profissionalNome={profissionalNome}
           municipioNome={municipioNome}
+          fotoPerfilDataUrl={fotoPerfilDataUrl}
           materias={materias}
           destaquesRapidos={destaquesRapidos}
         />

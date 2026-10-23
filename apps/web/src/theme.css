@@ -435,6 +435,10 @@ a {
 
 .jc-logo-foto {
   object-fit: cover;
+  /* Prioriza a parte de cima da foto — numa selfie vertical o rosto costuma
+     ficar no terço superior, com corpo/ombros ocupando o resto abaixo;
+     sem isso, um recorte central corta a cabeça pra caber o corpo todo. */
+  object-position: 50% 20%;
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px var(--veryhigh);
 }

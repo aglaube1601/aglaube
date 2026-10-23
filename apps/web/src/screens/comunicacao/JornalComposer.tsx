@@ -213,6 +213,7 @@ interface JornalComposerProps {
   profissionalNome: string;
   municipioNome: string;
   fotoPerfilDataUrl: string;
+  erroFotoPerfil?: string | null;
   materias: MateriaJornal[];
   destaquesRapidos: DestaqueRapido[];
   onProfissionalNomeChange: (valor: string) => void;
@@ -227,6 +228,7 @@ export function JornalComposer({
   profissionalNome,
   municipioNome,
   fotoPerfilDataUrl,
+  erroFotoPerfil,
   materias,
   destaquesRapidos,
   onProfissionalNomeChange,
@@ -364,13 +366,13 @@ export function JornalComposer({
       </div>
 
       <div className="field">
-        <label>Sua foto (aparece no círculo ao lado do seu nome — opcional)</label>
+        <label>Sua foto (aparece no círculo ao lado do seu nome — salva na sua conta)</label>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {fotoPerfilDataUrl && (
             <img
               src={fotoPerfilDataUrl}
               alt="Prévia da sua foto"
-              style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: '50%', flexShrink: 0 }}
+              style={{ width: 48, height: 48, objectFit: 'cover', objectPosition: '50% 20%', borderRadius: '50%', flexShrink: 0 }}
             />
           )}
           <label className="btn btn-outline" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', fontSize: 12 }}>
@@ -392,6 +394,11 @@ export function JornalComposer({
             </button>
           )}
         </div>
+        {erroFotoPerfil && (
+          <div className="alert alert-error" style={{ marginTop: 8 }}>
+            {erroFotoPerfil}
+          </div>
+        )}
       </div>
 
       <p className="section-title" style={{ margin: '0 0 6px' }}>

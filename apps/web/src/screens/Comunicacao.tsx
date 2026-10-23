@@ -38,7 +38,7 @@ interface ResultadoCampanha {
 }
 
 export function Comunicacao() {
-  const { municipio, usuario } = useAuth();
+  const { municipio, usuario, atualizarFotoPerfil } = useAuth();
   const [comunidades, setComunidades] = useState<Comunidade[]>([]);
   const [template, setTemplate] = useState('aniversario');
   const [publico, setPublico] = useState('aniversariantes_semana');
@@ -62,9 +62,27 @@ export function Comunicacao() {
   // JornalComposer), então o profissional pode ajustar como quiser que
   // apareça (ex: incluir "Dr./Dra.") sem precisar mudar o nome da conta.
   const [jornalProfissionalNome, setJornalProfissionalNome] = useState(usuario?.nome ?? '');
-  const [jornalFotoPerfil, setJornalFotoPerfil] = useState('');
+  // Começa com a foto já salva na conta (se houver) — não precisa reanexar
+  // a cada edição. Salva de volta na conta sempre que o usuário troca
+  // (ver onFotoPerfilChange), então fica disponível também da próxima vez
+  // que fizer login, inclusive de outro dispositivo.
+  const [jornalFotoPerfil, setJornalFotoPerfil] = useState(usuario?.fotoPerfilUrl ?? '');
+  const [erroFotoPerfil, setErroFotoPerfil] = useState<string | null>(null);
   const [jornalMaterias, setJornalMaterias] = useState<MateriaJornal[]>([criarMateriaVazia()]);
   const [jornalDestaquesRapidos, setJornalDestaquesRapidos] = useState<DestaqueRapido[]>([]);
+
+  async function onFotoPerfilChange(dataUrl: string) {
+    setJornalFotoPerfil(dataUrl); // otimista: o composer reage na hora
+    setErroFotoPerfil(null);
+    try {
+      await atualizarFotoPerfil(dataUrl);
+    } catch {
+      // Mantém a foto valendo nesta edição mesmo se o salvamento na conta
+      // falhar (ex: API fora do ar) — só avisa que vai precisar reanexar
+      // da próxima vez, não quebra o que o usuário está montando agora.
+      setErroFotoPerfil('Não foi possível salvar a foto na sua conta. Ela continua valendo só nesta edição.');
+    }
+  }
 
   useEffect(() => {
     api
@@ -113,10 +131,11 @@ export function Comunicacao() {
         profissionalNome={jornalProfissionalNome}
         municipioNome={municipio?.nome ?? ''}
         fotoPerfilDataUrl={jornalFotoPerfil}
+        erroFotoPerfil={erroFotoPerfil}
         materias={jornalMaterias}
         destaquesRapidos={jornalDestaquesRapidos}
         onProfissionalNomeChange={setJornalProfissionalNome}
-        onFotoPerfilChange={setJornalFotoPerfil}
+        onFotoPerfilChange={onFotoPerfilChange}
         onMateriasChange={setJornalMaterias}
         onDestaquesRapidosChange={setJornalDestaquesRapidos}
         onConcluir={(corpo) => {

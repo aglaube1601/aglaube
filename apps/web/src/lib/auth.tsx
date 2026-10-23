@@ -10,6 +10,7 @@ export interface Usuario {
   perfil: PerfilUsuario;
   permissaoEngajamentoPolitico: boolean;
   municipioId: string | null;
+  fotoPerfilUrl: string | null;
 }
 
 interface Municipio {
@@ -25,6 +26,7 @@ interface AuthState {
   erro: string | null;
   login: (email: string, senha: string) => Promise<void>;
   logout: () => void;
+  atualizarFotoPerfil: (fotoPerfilUrl: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -95,8 +97,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMunicipio(null);
   }
 
+  // Salva na conta (não só no estado local) — assim a foto persiste entre
+  // sessões/dispositivos e não precisa ser reanexada a cada edição do
+  // Jornal. fotoPerfilUrl vazio remove a foto.
+  async function atualizarFotoPerfil(fotoPerfilUrl: string) {
+    const resposta = await api.patch<Usuario>('/usuarios/me/foto-perfil', { fotoPerfilUrl });
+    localStorage.setItem(USER_KEY, JSON.stringify(resposta));
+    setUsuario(resposta);
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, municipio, loading, erro, login, logout }}>
+    <AuthContext.Provider value={{ usuario, municipio, loading, erro, login, logout, atualizarFotoPerfil }}>
       {children}
     </AuthContext.Provider>
   );

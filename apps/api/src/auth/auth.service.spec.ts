@@ -16,7 +16,7 @@ describe('AuthService', () => {
   let jwtService: { signAsync: jest.Mock };
 
   beforeEach(async () => {
-    prisma = { usuario: { findUnique: jest.fn(), create: jest.fn() } };
+    prisma = { usuario: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() } };
     jwtService = { signAsync: jest.fn().mockResolvedValue('token-fake') };
 
     const moduleRef = await Test.createTestingModule({
@@ -186,6 +186,53 @@ describe('AuthService', () => {
       });
 
       expect(resultado.permissaoEngajamentoPolitico).toBe(false);
+    });
+  });
+
+  describe('atualizarFotoPerfil', () => {
+    it('atualiza só o próprio usuário (id vem do chamador, não do corpo) e nunca retorna senhaHash', async () => {
+      prisma.usuario.update.mockResolvedValue({
+        id: 'u1',
+        nome: 'A',
+        email: 'a@x.com',
+        senhaHash: 'hash-super-secreto',
+        perfil: 'coordenador',
+        permissaoEngajamentoPolitico: false,
+        municipioId: null,
+        fotoPerfilUrl: 'data:image/jpeg;base64,abc123',
+      });
+
+      const resultado = await service.atualizarFotoPerfil('u1', 'data:image/jpeg;base64,abc123');
+
+      expect(prisma.usuario.update).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        data: { fotoPerfilUrl: 'data:image/jpeg;base64,abc123' },
+      });
+      expect(resultado.fotoPerfilUrl).toBe('data:image/jpeg;base64,abc123');
+      expect(resultado).not.toHaveProperty('senhaHash');
+    });
+
+    it('string vazia remove a foto (grava null, não string vazia)', async () => {
+      prisma.usuario.update.mockImplementation(({ data }: any) =>
+        Promise.resolve({
+          id: 'u1',
+          nome: 'A',
+          email: 'a@x.com',
+          senhaHash: 'hash',
+          perfil: 'coordenador',
+          permissaoEngajamentoPolitico: false,
+          municipioId: null,
+          ...data,
+        }),
+      );
+
+      const resultado = await service.atualizarFotoPerfil('u1', '');
+
+      expect(prisma.usuario.update).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        data: { fotoPerfilUrl: null },
+      });
+      expect(resultado.fotoPerfilUrl).toBeNull();
     });
   });
 });

@@ -294,6 +294,11 @@ model Usuario {
   permissaoEngajamentoPolitico  Boolean  @default(false)
   municipioId                   String?
   municipio                     Municipio? @relation(fields: [municipioId], references: [id])
+  // Data URL (base64) da foto de perfil, já redimensionada no navegador
+  // antes do upload — ver JornalComposer.tsx. Guardada direto no banco
+  // (sem storage de arquivo externo) de propósito: é a mesma abordagem
+  // pragmática de MVP já usada pelas imagens anexadas ao Jornal.
+  fotoPerfilUrl                 String?
   criadoEm                      DateTime @default(now())
 
   contatosCadastrados     Contato[]              @relation("ContatosCadastrados")

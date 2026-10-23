@@ -29,6 +29,7 @@ export interface UsuarioSemSenha {
   perfil: string;
   permissaoEngajamentoPolitico: boolean;
   municipioId: string | null;
+  fotoPerfilUrl: string | null;
 }
 
 @Injectable()
@@ -98,6 +99,20 @@ export class AuthService {
     return this.paraRespostaSemSenha(usuario);
   }
 
+  /**
+   * Usuário atualiza a PRÓPRIA foto (usuarioId vem do token, nunca do
+   * corpo da requisição — ver AuthController). Qualquer perfil autenticado
+   * pode chamar isto pra si mesmo; não é uma ação de Administrador.
+   */
+  async atualizarFotoPerfil(usuarioId: string, fotoPerfilUrl: string): Promise<UsuarioSemSenha> {
+    const usuario = await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { fotoPerfilUrl: fotoPerfilUrl || null },
+    });
+
+    return this.paraRespostaSemSenha(usuario);
+  }
+
   private normalizarEmail(email: string): string {
     return email.trim().toLowerCase();
   }
@@ -109,6 +124,7 @@ export class AuthService {
     perfil: string;
     permissaoEngajamentoPolitico: boolean;
     municipioId: string | null;
+    fotoPerfilUrl: string | null;
   }): UsuarioSemSenha {
     // Montagem campo a campo — nunca um spread do objeto do Prisma.
     // Um spread ali dentro é exatamente o tipo de mudança "inofensiva"
@@ -120,6 +136,7 @@ export class AuthService {
       perfil: usuario.perfil,
       permissaoEngajamentoPolitico: usuario.permissaoEngajamentoPolitico,
       municipioId: usuario.municipioId,
+      fotoPerfilUrl: usuario.fotoPerfilUrl,
     };
   }
 }

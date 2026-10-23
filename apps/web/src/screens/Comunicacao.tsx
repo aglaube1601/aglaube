@@ -3,12 +3,9 @@ import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import {
   JornalComposer,
-  criarSecaoVazia,
-  type SecaoJornal,
-  type DestaqueJornal,
-  type GrupoIndicador,
-  type GrupoLinha,
-  type ImagemJornal,
+  criarMateriaVazia,
+  type MateriaJornal,
+  type DestaqueRapido,
 } from './comunicacao/JornalComposer';
 
 interface Comunidade {
@@ -65,13 +62,8 @@ export function Comunicacao() {
   // JornalComposer), então o profissional pode ajustar como quiser que
   // apareça (ex: incluir "Dr./Dra.") sem precisar mudar o nome da conta.
   const [jornalProfissionalNome, setJornalProfissionalNome] = useState(usuario?.nome ?? '');
-  const [jornalTitulo, setJornalTitulo] = useState('');
-  const [jornalSubtitulo, setJornalSubtitulo] = useState('');
-  const [jornalSecoes, setJornalSecoes] = useState<SecaoJornal[]>([criarSecaoVazia()]);
-  const [jornalDestaques, setJornalDestaques] = useState<DestaqueJornal[]>([]);
-  const [jornalIndicadores, setJornalIndicadores] = useState<GrupoIndicador[]>([]);
-  const [jornalIndicadoresLinha, setJornalIndicadoresLinha] = useState<GrupoLinha[]>([]);
-  const [jornalImagens, setJornalImagens] = useState<ImagemJornal[]>([]);
+  const [jornalMaterias, setJornalMaterias] = useState<MateriaJornal[]>([criarMateriaVazia()]);
+  const [jornalDestaquesRapidos, setJornalDestaquesRapidos] = useState<DestaqueRapido[]>([]);
 
   useEffect(() => {
     api
@@ -119,21 +111,11 @@ export function Comunicacao() {
       <JornalComposer
         profissionalNome={jornalProfissionalNome}
         municipioNome={municipio?.nome ?? ''}
-        titulo={jornalTitulo}
-        subtitulo={jornalSubtitulo}
-        secoes={jornalSecoes}
-        destaques={jornalDestaques}
-        indicadores={jornalIndicadores}
-        indicadoresLinha={jornalIndicadoresLinha}
-        imagens={jornalImagens}
+        materias={jornalMaterias}
+        destaquesRapidos={jornalDestaquesRapidos}
         onProfissionalNomeChange={setJornalProfissionalNome}
-        onTituloChange={setJornalTitulo}
-        onSubtituloChange={setJornalSubtitulo}
-        onSecoesChange={setJornalSecoes}
-        onDestaquesChange={setJornalDestaques}
-        onIndicadoresChange={setJornalIndicadores}
-        onIndicadoresLinhaChange={setJornalIndicadoresLinha}
-        onImagensChange={setJornalImagens}
+        onMateriasChange={setJornalMaterias}
+        onDestaquesRapidosChange={setJornalDestaquesRapidos}
         onConcluir={(corpo) => {
           setMensagem(corpo);
           setJornalAberto(false);

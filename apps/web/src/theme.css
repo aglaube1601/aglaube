@@ -378,348 +378,6 @@ a {
   display: inline-block;
 }
 
-/* Jornal Médico — cartaz no estilo "research summary" (referência: NEJM). */
-.jornal-visual {
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.jornal-masthead {
-  background: var(--navy);
-  color: #fff;
-  text-align: center;
-  padding: 22px 20px 20px;
-}
-
-.jornal-masthead .eyebrow {
-  font-size: 11px;
-  font-style: italic;
-  letter-spacing: 0.6px;
-  opacity: 0.85;
-  margin: 0 0 8px;
-}
-
-.jornal-masthead h1 {
-  font-size: 23px;
-  font-weight: 800;
-  margin: 0 0 6px;
-  line-height: 1.2;
-  letter-spacing: 0.2px;
-}
-
-.jornal-masthead .jornal-topico-semana {
-  font-size: 13.5px;
-  font-weight: 600;
-  opacity: 0.92;
-  margin: 0 0 8px;
-  line-height: 1.3;
-}
-
-.jornal-masthead .byline {
-  font-size: 11px;
-  opacity: 0.8;
-}
-
-.jornal-corpo {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  padding: 20px;
-}
-
-@media (min-width: 640px) {
-  .jornal-corpo {
-    grid-template-columns: 1.3fr 1fr;
-    gap: 24px;
-  }
-
-  /* Divisão central em duas colunas, igual ao modelo de referência — uma
-     linha fina separando o texto corrido (esquerda) dos gráficos/imagens
-     (direita). Só em telas largas: empilhado no celular não precisa de
-     divisor. */
-  .jornal-coluna-esquerda {
-    border-right: 1px solid var(--line);
-    padding-right: 24px;
-  }
-}
-
-.jornal-secao {
-  margin-bottom: 16px;
-}
-
-.jornal-secao-titulo {
-  font-size: 11.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--danger);
-  margin: 0 0 6px;
-}
-
-.jornal-secao p {
-  font-size: 12.5px;
-  line-height: 1.55;
-  margin: 0;
-  color: var(--ink);
-}
-
-.jornal-imagens-bloco {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.jornal-imagem-item {
-  margin: 0;
-}
-
-.jornal-imagem-item img {
-  display: block;
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-}
-
-.jornal-imagem-item figcaption {
-  font-size: 10px;
-  color: var(--muted);
-  text-align: center;
-  margin-top: 4px;
-}
-
-.jornal-destaques-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.jornal-destaque-card {
-  background: var(--paper);
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.jornal-destaque-card .icone {
-  font-size: 18px;
-  margin-bottom: 4px;
-  display: block;
-}
-
-.jornal-destaque-badge-wrap {
-  position: relative;
-  height: 60px;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-}
-
-.jornal-destaque-crowd {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: center;
-  gap: 0;
-  opacity: 0.3;
-  font-size: 10px;
-  line-height: 1.1;
-  padding: 2px;
-}
-
-.jornal-destaque-badge {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  box-shadow: 0 0 0 3px #fff;
-}
-
-.jornal-destaque-badge-wrap .amostra {
-  position: absolute;
-  bottom: 3px;
-  right: 6px;
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--ink);
-  background: #fff;
-  padding: 1px 5px;
-  border-radius: 999px;
-}
-
-.jornal-destaque-card .titulo {
-  font-size: 11.5px;
-  font-weight: 800;
-  margin: 0 0 4px;
-  color: var(--ink);
-}
-
-.jornal-destaque-card .linha {
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--ink);
-}
-
-.jornal-indicadores-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 16px;
-}
-
-.jornal-indicador {
-  margin-bottom: 18px;
-}
-
-.jornal-indicador .titulo {
-  font-size: 12px;
-  font-weight: 800;
-  margin: 0 0 2px;
-  color: var(--ink);
-  text-align: center;
-}
-
-.jornal-indicador .descricao {
-  font-size: 10px;
-  color: var(--muted);
-  text-align: center;
-  margin: 0 0 10px;
-}
-
-.jornal-grafico-painel {
-  display: flex;
-  gap: 6px;
-  background: var(--paper);
-  border-radius: 8px;
-  padding: 10px 10px 0;
-}
-
-.jornal-grafico-eixo {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-end;
-  height: 90px;
-  font-size: 8px;
-  color: var(--muted);
-  padding-bottom: 19px;
-}
-
-.jornal-barra-grupo {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 14px;
-  height: 90px;
-  border-bottom: 1px solid var(--line);
-  padding: 0 8px;
-  background-image: repeating-linear-gradient(to top, var(--line) 0, var(--line) 1px, transparent 1px, transparent 25%);
-}
-
-.jornal-barra {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  width: 58px;
-}
-
-.jornal-barra .valor {
-  font-size: 12px;
-  font-weight: 800;
-  margin-bottom: 1px;
-}
-
-.jornal-barra .subvalor {
-  font-size: 7.5px;
-  color: var(--muted);
-  font-weight: 600;
-  margin-bottom: 3px;
-  text-align: center;
-  line-height: 1.15;
-}
-
-.jornal-barra .haste {
-  width: 28px;
-  border-radius: 4px 4px 0 0;
-}
-
-.jornal-barra .rotulo {
-  font-size: 9.5px;
-  color: var(--muted);
-  font-weight: 600;
-  margin-top: 6px;
-  text-align: center;
-  line-height: 1.2;
-}
-
-/* Gráfico de linha — reaproveita .jornal-grafico-painel/.jornal-grafico-eixo
-   dos gráficos de barra, mas sem o padding-bottom (não há "rótulo" de barra
-   consumindo espaço dentro da área de 90px: os ticks do eixo X ficam numa
-   linha própria abaixo do SVG). */
-.jornal-grafico-eixo.linha {
-  padding-bottom: 0;
-}
-
-.jornal-grafico-linha-area {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.jornal-grafico-linha-eixox {
-  display: flex;
-  justify-content: space-between;
-  font-size: 8px;
-  color: var(--muted);
-  padding: 2px 2px 0;
-}
-
-.jornal-grafico-linha-rotulo-x {
-  text-align: center;
-  font-size: 8.5px;
-  color: var(--muted);
-  margin: 2px 0 0;
-}
-
-.jornal-legenda {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 8px;
-}
-
-.jornal-legenda-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9.5px;
-  color: var(--ink);
-}
-
-.jornal-legenda-item .ponto {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
 .link-remover {
   background: transparent;
   border: none;
@@ -727,6 +385,180 @@ a {
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+}
+
+/* Jornal Médico — capa única estilo jornal impresso (referência: jornal
+   "Medicina" do CFM). Masthead verde com a marca do profissional, notícias
+   curtas (sem "ver pág. X" — o texto inteiro já cabe na própria capa) e uma
+   fileira de destaques rápidos no rodapé. É o próprio componente capturado
+   como imagem/PDF pelo composer. */
+.jornal-visual {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.jc-masthead {
+  background: linear-gradient(180deg, #f4faf6 0%, #e7f1ea 100%);
+  padding: 16px 20px 14px;
+}
+
+.jc-edicao {
+  text-align: center;
+  font-size: 9.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.jc-marca {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.jc-logo {
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--veryhigh);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+}
+
+.jc-marca h1 {
+  font-size: 25px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 5px;
+  line-height: 1.1;
+}
+
+.jc-tagline {
+  display: inline-block;
+  background: var(--veryhigh);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.jc-barra-verde {
+  height: 5px;
+  background: var(--veryhigh);
+}
+
+.jc-corpo {
+  padding: 18px 20px 4px;
+}
+
+.jc-materia {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.jc-materia-divisor {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.jc-categoria {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.jc-manchete {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--veryhigh);
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.jc-materia-conteudo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 560px) {
+  .jc-materia-conteudo.com-imagem {
+    grid-template-columns: 1fr 1.2fr;
+    align-items: start;
+  }
+}
+
+.jc-texto {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.jc-figura {
+  margin: 0;
+}
+
+.jc-figura img {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+}
+
+.jc-figura figcaption {
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.jc-destaques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 6px 0 18px;
+}
+
+.jc-destaque-rapido {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.jc-destaque-header {
+  background: var(--veryhigh);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 7px 6px;
+}
+
+.jc-destaque-corpo {
+  background: #e7f1ea;
+  font-size: 10.5px;
+  color: var(--ink);
+  text-align: center;
+  font-style: italic;
+  padding: 10px 8px;
+  line-height: 1.4;
 }
 
 .jornal-rodape {

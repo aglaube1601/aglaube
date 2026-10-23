@@ -501,13 +501,13 @@ a {
   gap: 12px;
 }
 
-/* Foto sempre à esquerda, num bloco menor, com o texto preenchendo o
-   resto ao lado — em qualquer largura de tela (não só em telas largas:
-   como o app é mobile-first, a maioria das edições é montada e exportada
-   direto do celular). Figure vem antes de .jc-texto no JSX, então cai na
-   1ª coluna (esquerda) naturalmente. */
+/* Foto sempre à direita, numa coluna proporcional ao texto (igual ao
+   modelo de referência do CFM) — em qualquer largura de tela, não só em
+   telas largas, já que o app é mobile-first e a maioria das edições é
+   montada e exportada direto do celular. .jc-texto vem antes de
+   .jc-figura no JSX, então cai na 1ª coluna (esquerda) naturalmente. */
 .jc-materia-conteudo.com-imagem {
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 1fr 1.15fr;
   align-items: start;
 }
 

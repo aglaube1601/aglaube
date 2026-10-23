@@ -181,13 +181,13 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
             {materia.categoria.trim() && <p className="jc-categoria">{materia.categoria}</p>}
             {materia.titulo.trim() && <h2 className="jc-manchete">{materia.titulo}</h2>}
             <div className={`jc-materia-conteudo ${materia.imagemDataUrl ? 'com-imagem' : ''}`}>
+              <p className="jc-texto">{materia.corpo}</p>
               {materia.imagemDataUrl && (
                 <figure className="jc-figura">
                   <img src={materia.imagemDataUrl} alt={materia.imagemLegenda || materia.titulo || 'Imagem da notícia'} />
                   {materia.imagemLegenda.trim() && <figcaption>{materia.imagemLegenda}</figcaption>}
                 </figure>
               )}
-              <p className="jc-texto">{materia.corpo}</p>
             </div>
           </div>
         ))}

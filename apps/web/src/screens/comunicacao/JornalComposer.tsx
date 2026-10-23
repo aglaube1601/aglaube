@@ -152,6 +152,11 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
   const materiasPreenchidas = materias.filter((m) => m.titulo.trim() || m.corpo.trim());
   const destaquesPreenchidos = destaquesRapidos.filter((d) => d.titulo.trim() || d.corpo.trim());
 
+  // Conta só entre as notícias QUE TÊM foto — uma notícia sem imagem não
+  // deve quebrar o ziguezague das que têm (ver padrão nas edições de
+  // referência: 1ª foto à direita, 2ª à esquerda, 3ª à direita de novo...).
+  let indiceIlustrada = -1;
+
   return (
     <div ref={ref} className="jornal-visual">
       <div className="jc-masthead">
@@ -176,11 +181,16 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
             As notícias que você adicionar aparecem aqui.
           </p>
         )}
-        {materiasPreenchidas.map((materia, indice) => (
+        {materiasPreenchidas.map((materia, indice) => {
+          if (materia.imagemDataUrl) indiceIlustrada += 1;
+          const imagemEsquerda = materia.imagemDataUrl && indiceIlustrada % 2 === 1;
+          return (
           <div key={materia.id} className={`jc-materia ${indice > 0 ? 'jc-materia-divisor' : ''}`}>
             {materia.categoria.trim() && <p className="jc-categoria">{materia.categoria}</p>}
             {materia.titulo.trim() && <h2 className="jc-manchete">{materia.titulo}</h2>}
-            <div className={`jc-materia-conteudo ${materia.imagemDataUrl ? 'com-imagem' : ''}`}>
+            <div
+              className={`jc-materia-conteudo ${materia.imagemDataUrl ? 'com-imagem' : ''} ${imagemEsquerda ? 'jc-imagem-esquerda' : ''}`}
+            >
               <p className="jc-texto">{materia.corpo}</p>
               {materia.imagemDataUrl && (
                 <figure className="jc-figura">
@@ -190,7 +200,8 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {destaquesPreenchidos.length > 0 && (
           <div className="jc-destaques-grid">

@@ -501,29 +501,14 @@ a {
   gap: 12px;
 }
 
-@media (min-width: 560px) {
-  .jc-materia-conteudo.com-imagem {
-    grid-template-columns: 1fr 1.2fr;
-    align-items: start;
-  }
-
-  /* Padrão observado nas edições de referência: a foto da 1ª notícia
-     ilustrada fica à direita do texto, a da 2ª fica à esquerda, alternando
-     — cria o ziguezague típico de jornal impresso em vez de toda foto cair
-     sempre do mesmo lado. Só entra em telas largas; no celular (a maioria
-     dos casos, já que o app é mobile-first) sempre fica texto acima da
-     foto, pra manter a leitura simples de cima pra baixo. */
-  .jc-materia-conteudo.com-imagem.jc-imagem-esquerda {
-    grid-template-columns: 1.2fr 1fr;
-  }
-
-  .jc-materia-conteudo.com-imagem.jc-imagem-esquerda .jc-texto {
-    order: 2;
-  }
-
-  .jc-materia-conteudo.com-imagem.jc-imagem-esquerda .jc-figura {
-    order: 1;
-  }
+/* Foto sempre à esquerda, num bloco menor, com o texto preenchendo o
+   resto ao lado — em qualquer largura de tela (não só em telas largas:
+   como o app é mobile-first, a maioria das edições é montada e exportada
+   direto do celular). Figure vem antes de .jc-texto no JSX, então cai na
+   1ª coluna (esquerda) naturalmente. */
+.jc-materia-conteudo.com-imagem {
+  grid-template-columns: 110px 1fr;
+  align-items: start;
 }
 
 .jc-texto {

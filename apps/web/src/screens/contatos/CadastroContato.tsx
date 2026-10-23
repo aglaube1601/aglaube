@@ -51,6 +51,7 @@ export function CadastroContato() {
   const [telefone, setTelefone] = useState('');
   const [comunidadeId, setComunidadeId] = useState('');
   const [endereco, setEndereco] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
 
   const [status, setStatus] = useState('');
   const [origem, setOrigem] = useState('');
@@ -86,6 +87,7 @@ export function CadastroContato() {
         whatsapp: telefone || undefined,
         comunidadeId,
         endereco: endereco || undefined,
+        dataNascimento: dataNascimento || undefined,
         origemCadastro: 'web',
         engajamentoPolitico,
         ignorarDuplicatasIds,
@@ -161,6 +163,10 @@ export function CadastroContato() {
               <label>Endereço</label>
               <input value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número" />
             </div>
+            <div className="field">
+              <label>Data de nascimento</label>
+              <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} />
+            </div>
             <p style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: -4 }}>
               * obrigatório — sem comunidade não é possível territorializar o contato.
             </p>
@@ -227,6 +233,10 @@ export function CadastroContato() {
               <Linha
                 label="Comunidade"
                 valor={comunidades.find((c) => c.id === comunidadeId)?.nome ?? '—'}
+              />
+              <Linha
+                label="Data de nascimento"
+                valor={dataNascimento ? new Date(`${dataNascimento}T00:00:00`).toLocaleDateString('pt-BR') : '—'}
               />
               {podeRegistrarEngajamento && status && (
                 <Linha label="Engajamento" valor={`${status} · ${origem || '—'} · ${confianca || '—'}`} />

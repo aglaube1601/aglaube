@@ -160,7 +160,18 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
           {fotoPerfilDataUrl ? (
             <img className="jc-logo jc-logo-foto" src={fotoPerfilDataUrl} alt={profissionalNome || 'Foto do profissional'} />
           ) : (
-            <span className="jc-logo">🩺</span>
+            // SVG em vez de emoji de propósito: emoji depende de fonte
+            // colorida que alguns navegadores de celular não rasterizam
+            // direito na hora de gerar a imagem/PDF (vira um círculo em
+            // branco). Um path SVG simples sempre renderiza.
+            <span className="jc-logo" aria-hidden>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3v6a4 4 0 0 0 8 0V3" />
+                <path d="M10 15a6 6 0 0 0 6-6V7" />
+                <circle cx="18" cy="6" r="2" />
+                <circle cx="6" cy="18" r="3" />
+              </svg>
+            </span>
           )}
           <div>
             <h1>{profissionalNome.trim() || 'Nome do profissional'}</h1>
@@ -305,10 +316,20 @@ export function JornalComposer({
     setBaixando('png');
     try {
       const dataUrl = await toPng(visualRef.current, { pixelRatio: 2, backgroundColor: '#ffffff' });
+      // Baixar com href = data URL direto funciona no desktop, mas em vários
+      // navegadores de celular (sobretudo Safari/iOS) o clique só abre a
+      // imagem em vez de baixar. Convertendo pra Blob + Object URL — o mesmo
+      // caminho que o jsPDF usa internamente no "Baixar PDF", que já
+      // funciona no celular — o download fica confiável nos dois.
+      const blob = await (await fetch(dataUrl)).blob();
+      const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `jornal-${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = dataUrl;
+      link.href = objectUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
     } catch {
       setErroExportacao('Não foi possível gerar a imagem. Tente novamente.');
     } finally {

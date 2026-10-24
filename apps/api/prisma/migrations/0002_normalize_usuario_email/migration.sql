@@ -1,0 +1,11 @@
+-- 0002_normalize_usuario_email.sql
+--
+-- AuthService agora compara e-mail normalizado (trim + lowercase) em todo
+-- login/criação de usuário — Postgres compara texto de forma
+-- case-sensitive por padrão, e um celular (iOS em particular) pode
+-- autocapitalizar a primeira letra de um campo ou deixar espaço em
+-- branco sem o usuário perceber, fazendo a MESMA senha falhar só por
+-- causa da caixa do e-mail. Esta migration alinha os registros que já
+-- existiam antes dessa mudança, pra login funcionar independente de como
+-- o e-mail foi digitado originalmente no cadastro.
+UPDATE "Usuario" SET email = lower(trim(email));

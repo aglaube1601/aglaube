@@ -1,0 +1,592 @@
+/* Paleta civic navy/teal — mesma do wireframe aprovado (mapa/cadastro). */
+:root {
+  --ink: #152238;
+  --navy: #1b2a4a;
+  --teal: #2d6e7e;
+  --teal-light: #dceaea;
+  --amber: #c98a3e;
+  --amber-light: #f5e6ce;
+  --paper: #f6f4ef;
+  --card: #ffffff;
+  --line: #e4e1d8;
+  --muted: #6b7280;
+  --low: #e3e7d3;
+  --mid: #b9d2c4;
+  --high: #5c9a80;
+  --veryhigh: #2d6e4f;
+  --danger: #b85450;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+/* Mobile-first: app-shell é uma coluna de largura fixa tipo "tira de
+   celular". A partir do breakpoint de desktop, vira layout de largura
+   total com topbar + sidebar de navegação fixa (ver .body-layout /
+   .sidebar-nav abaixo) — bottom-nav sai, sidebar entra. */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar h1 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.topbar button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  opacity: 0.85;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.body-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 84px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: flex;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.bottom-nav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 0;
+  border-radius: 8px;
+}
+
+.bottom-nav a.active {
+  color: var(--teal);
+  background: var(--teal-light);
+}
+
+.sidebar-nav {
+  display: none;
+}
+
+/* Desktop/tablet-largo: solta a largura fixa de 480px, entra o layout de
+   sidebar. 860px cobre a maioria dos laptops sem cortar em tablets em
+   modo retrato. */
+@media (min-width: 860px) {
+  .app-shell {
+    max-width: none;
+    margin: 0;
+  }
+
+  .body-layout {
+    flex-direction: row;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 9px;
+  }
+
+  .sidebar-nav a:hover {
+    background: var(--paper);
+  }
+
+  .sidebar-nav a.active {
+    color: var(--teal);
+    background: var(--teal-light);
+  }
+
+  .sidebar-nav a .nav-icon {
+    font-size: 16px;
+  }
+
+  .screen {
+    padding-bottom: 32px;
+  }
+
+  .screen-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 0;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+}
+
+.btn-success {
+  background: var(--veryhigh);
+  color: #fff;
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+}
+
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.chip.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.alert-amber {
+  background: var(--amber-light);
+  color: var(--ink);
+}
+
+.alert-error {
+  background: #fbe4e2;
+  color: var(--danger);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 860px) {
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+}
+
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.kpi-card .value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 4px 0 2px;
+}
+
+.kpi-card .label {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 860px) {
+  .chart-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 14px;
+  }
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin: 18px 0 8px;
+}
+
+.spinner {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.link-remover {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Jornal Médico — capa única estilo jornal impresso (referência: jornal
+   "Medicina" do CFM). Masthead verde com a marca do profissional, notícias
+   curtas (sem "ver pág. X" — o texto inteiro já cabe na própria capa) e uma
+   fileira de destaques rápidos no rodapé. É o próprio componente capturado
+   como imagem/PDF pelo composer. */
+.jornal-visual {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.jc-masthead {
+  background: linear-gradient(180deg, #f4faf6 0%, #e7f1ea 100%);
+  padding: 16px 20px 14px;
+}
+
+.jc-edicao {
+  text-align: center;
+  font-size: 9.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.jc-marca {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.jc-logo {
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--veryhigh);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+}
+
+.jc-logo-foto {
+  object-fit: cover;
+  /* Prioriza a parte de cima da foto — numa selfie vertical o rosto costuma
+     ficar no terço superior, com corpo/ombros ocupando o resto abaixo;
+     sem isso, um recorte central corta a cabeça pra caber o corpo todo. */
+  object-position: 50% 20%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--veryhigh);
+}
+
+.jc-marca h1 {
+  font-size: 25px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 5px;
+  line-height: 1.1;
+}
+
+.jc-tagline {
+  display: inline-block;
+  background: var(--veryhigh);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.jc-barra-verde {
+  height: 5px;
+  background: var(--veryhigh);
+}
+
+.jc-corpo {
+  padding: 18px 20px 4px;
+}
+
+.jc-materia {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.jc-materia-divisor {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.jc-categoria {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.jc-manchete {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--veryhigh);
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.jc-materia-conteudo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* Foto sempre à direita, numa coluna proporcional ao texto (igual ao
+   modelo de referência do CFM) — em qualquer largura de tela, não só em
+   telas largas, já que o app é mobile-first e a maioria das edições é
+   montada e exportada direto do celular. .jc-texto vem antes de
+   .jc-figura no JSX, então cai na 1ª coluna (esquerda) naturalmente.
+   align-items: start de propósito — já tentamos esticar a foto (altura
+   100% + flex) pra acompanhar o texto, mas isso depende de uma cadeia de
+   altura em porcentagem (grid -> flex -> img) que alguns navegadores de
+   celular não resolvem direito na hora de capturar o DOM pra gerar a
+   imagem/PDF, fazendo a foto sumir (fica um espaço vazio). Largura
+   100% + altura natural é mais simples e renderiza de forma confiável
+   em qualquer navegador, ao custo de eventualmente sobrar um vão vazio
+   se a foto for bem mais "baixa" que o texto. */
+.jc-materia-conteudo.com-imagem {
+  grid-template-columns: 1fr 1.15fr;
+  align-items: start;
+}
+
+.jc-texto {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0;
+  white-space: pre-wrap;
+  text-align: justify;
+}
+
+.jc-figura {
+  margin: 0;
+}
+
+.jc-figura img {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+}
+
+.jc-figura figcaption {
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.jc-destaques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 6px 0 18px;
+}
+
+.jc-destaque-rapido {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.jc-destaque-header {
+  background: var(--veryhigh);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 7px 6px;
+}
+
+.jc-destaque-corpo {
+  background: #e7f1ea;
+  font-size: 10.5px;
+  color: var(--ink);
+  text-align: center;
+  font-style: italic;
+  padding: 10px 8px;
+  line-height: 1.4;
+}
+
+.jornal-rodape {
+  border-top: 1px solid var(--line);
+  padding: 12px 20px 16px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}

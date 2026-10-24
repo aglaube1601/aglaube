@@ -1,0 +1,33 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec).
+#
+# Como usar: no dashboard do Render, "New" -> "Blueprint", aponte pro
+# fork/repo do GitHub. Ele lê este arquivo automaticamente e propõe criar
+# o serviço abaixo. As variáveis marcadas "sync: false" precisam ser
+# preenchidas manualmente no dashboard depois (não ficam neste arquivo de
+# propósito — são segredo ou dependem de outro serviço que ainda não
+# existe no momento do deploy). Ver DEPLOY.md para o passo a passo
+# completo, incluindo onde conseguir DATABASE_URL (Supabase) e REDIS_URL
+# (Upstash).
+
+services:
+  - type: web
+    name: aglaube-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # cole a connection string do Supabase (com ?sslmode=require)
+      - key: REDIS_URL
+        sync: false # cole a connection string rediss:// do Upstash
+      - key: JWT_SECRET
+        generateValue: true # Render gera um valor aleatório forte sozinho
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: CORS_ORIGIN
+        sync: false # URL do frontend no Vercel — preencher DEPOIS do deploy do frontend
+      - key: PORT
+        value: "3000"

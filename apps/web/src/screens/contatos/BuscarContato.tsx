@@ -80,6 +80,14 @@ export function BuscarContato() {
         }}
       />
 
+      <button
+        onClick={() => navigate('/contatos/novo', { state: { nomeSugerido: q } })}
+        className="btn btn-primary"
+        style={{ marginTop: 10 }}
+      >
+        + Cadastrar novo contato
+      </button>
+
       {erro && (
         <div className="alert alert-error" style={{ marginTop: 12 }}>
           {erro}
@@ -113,14 +121,6 @@ export function BuscarContato() {
           {carregando ? 'Carregando…' : 'Carregar mais'}
         </button>
       )}
-
-      <button
-        onClick={() => navigate('/contatos/novo', { state: { nomeSugerido: q } })}
-        className="btn btn-primary"
-        style={{ marginTop: 18 }}
-      >
-        + Cadastrar novo contato
-      </button>
     </div>
   );
 }

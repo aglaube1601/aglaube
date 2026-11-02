@@ -192,13 +192,18 @@ export const JornalVisual = forwardRef<HTMLDivElement, JornalVisualProps>(functi
             {materia.categoria.trim() && <p className="jc-categoria">{materia.categoria}</p>}
             {materia.titulo.trim() && <h2 className="jc-manchete">{materia.titulo}</h2>}
             <div className={`jc-materia-conteudo ${materia.imagemDataUrl ? 'com-imagem' : ''}`}>
-              <p className="jc-texto">{materia.corpo}</p>
+              {/* A figura vem ANTES do texto no HTML de propósito — float só
+                  faz o conteúdo que vem DEPOIS dele (no código-fonte) contornar
+                  a imagem; com o texto antes, a foto cairia solta depois do
+                  parágrafo inteiro, sem nenhum contorno (foi exatamente o bug
+                  visto quando a ordem era texto-depois-figura). */}
               {materia.imagemDataUrl && (
                 <figure className="jc-figura">
                   <img src={materia.imagemDataUrl} alt={materia.imagemLegenda || materia.titulo || 'Imagem da notícia'} />
                   {materia.imagemLegenda.trim() && <figcaption>{materia.imagemLegenda}</figcaption>}
                 </figure>
               )}
+              <p className="jc-texto">{materia.corpo}</p>
             </div>
           </div>
         ))}

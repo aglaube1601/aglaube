@@ -7,6 +7,15 @@ interface Comunidade {
   id: string;
   nome: string;
   bairro: { id: string; nome: string };
+  escolaLocalVotacao: string | null;
+}
+
+// Rótulo mostrado no dropdown: a escola (local de votação) em vez do nome
+// da comunidade — é o que a pessoa de fato reconhece ("eu voto lá na
+// escola tal"), não um nome de território administrativo. Município sem
+// seção eleitoral carregada ainda cai de volta pro nome da comunidade.
+function rotuloComunidade(c: Comunidade): string {
+  return c.escolaLocalVotacao ?? c.nome;
 }
 
 interface CandidatoDuplicata {
@@ -150,11 +159,11 @@ export function CadastroContato() {
               <input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
             </div>
             <div className="field">
-              <label>Comunidade *</label>
+              <label>Escola (local de votação) *</label>
               <select value={comunidadeId} onChange={(e) => setComunidadeId(e.target.value)}>
                 {comunidades.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.nome} — {c.bairro.nome}
+                    {rotuloComunidade(c)}
                   </option>
                 ))}
               </select>
@@ -168,7 +177,7 @@ export function CadastroContato() {
               <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} />
             </div>
             <p style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: -4 }}>
-              * obrigatório — sem comunidade não é possível territorializar o contato.
+              * obrigatório — sem escola não é possível territorializar o contato.
             </p>
           </div>
         )}
@@ -231,8 +240,11 @@ export function CadastroContato() {
               <Linha label="Nome" valor={nome} />
               <Linha label="Telefone" valor={telefone || '—'} />
               <Linha
-                label="Comunidade"
-                valor={comunidades.find((c) => c.id === comunidadeId)?.nome ?? '—'}
+                label="Escola"
+                valor={(() => {
+                  const c = comunidades.find((c) => c.id === comunidadeId);
+                  return c ? rotuloComunidade(c) : '—';
+                })()}
               />
               <Linha
                 label="Data de nascimento"

@@ -23,7 +23,7 @@ export class ComunidadesService {
    * de nunca vazar dado individual.
    */
   async listar(bairroId?: string) {
-    return this.prisma.comunidade.findMany({
+    const comunidades = await this.prisma.comunidade.findMany({
       where: bairroId ? { bairroId } : undefined,
       select: {
         id: true,
@@ -35,9 +35,24 @@ export class ComunidadesService {
             zonaEleitoral: { select: { id: true, numero: true } },
           },
         },
+        // Uma comunidade pode ter várias SecaoEleitoral, mas na prática
+        // (ver seed-secoes-eleitorais.ts) todas as seções de uma mesma
+        // comunidade caem no MESMO local de votação — pegar só a primeira
+        // já identifica a escola. Front usa isso como rótulo principal no
+        // lugar do nome da comunidade: pra quem cadastra, "a pessoa vota
+        // na escola tal" é mais concreto do que o nome da comunidade.
+        secoesEleitorais: {
+          select: { nomeLocalVotacao: true },
+          take: 1,
+        },
       },
       orderBy: { nome: 'asc' },
     });
+
+    return comunidades.map(({ secoesEleitorais, ...comunidade }) => ({
+      ...comunidade,
+      escolaLocalVotacao: secoesEleitorais[0]?.nomeLocalVotacao ?? null,
+    }));
   }
 
   async buscarPorId(id: string) {

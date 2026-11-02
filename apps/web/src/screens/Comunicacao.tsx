@@ -11,6 +11,14 @@ import {
 interface Comunidade {
   id: string;
   nome: string;
+  escolaLocalVotacao: string | null;
+}
+
+// Mesmo critério do cadastro de contato (ver CadastroContato.tsx): mostra
+// a escola/local de votação, que é o que a liderança reconhece, em vez do
+// nome administrativo da comunidade.
+function rotuloComunidade(c: Comunidade): string {
+  return c.escolaLocalVotacao ?? c.nome;
 }
 
 const TEMPLATES = [
@@ -24,7 +32,7 @@ const TEMPLATES = [
 
 const PUBLICOS = [
   { valor: 'aniversariantes_semana', rotulo: 'Aniversariantes da semana' },
-  { valor: 'por_comunidade', rotulo: 'Por comunidade' },
+  { valor: 'por_comunidade', rotulo: 'Por escola' },
   { valor: 'todos_com_consentimento', rotulo: 'Todos com consentimento ativo' },
   { valor: 'liderancas_e_apoiadores', rotulo: 'Lideranças e apoiadores' },
 ];
@@ -232,11 +240,11 @@ export function Comunicacao() {
 
       {publico === 'por_comunidade' && (
         <div className="field">
-          <label>Comunidade</label>
+          <label>Escola (local de votação)</label>
           <select value={comunidadeId} onChange={(e) => setComunidadeId(e.target.value)}>
             {comunidades.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.nome}
+                {rotuloComunidade(c)}
               </option>
             ))}
           </select>

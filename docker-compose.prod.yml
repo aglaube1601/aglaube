@@ -1,0 +1,67 @@
+# Compose de produção/teste — tudo num servidor só (ver VPS_DEPLOY.md).
+# Diferente do docker-compose.yml (só infra, pra desenvolvimento local
+# com a API rodando fora do Docker): este sobe o stack INTEIRO —
+# Postgres, Redis, API e o frontend já buildado — atrás de um único
+# `docker compose up`.
+#
+# Postgres e Redis NÃO publicam porta pro host: só a API e o frontend
+# precisam ser alcançáveis de fora, o banco e a fila só entre containers,
+# na rede interna do compose.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aglaube
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.prod}
+      POSTGRES_DB: aglaube
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aglaube -d aglaube']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://aglaube:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.prod}@postgres:5432/aglaube
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env.prod}
+      JWT_EXPIRES_IN: 8h
+      CORS_ORIGIN: ${PUBLIC_WEB_URL:?defina PUBLIC_WEB_URL no .env.prod}
+      PORT: 3000
+    ports:
+      - '3000:3000'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL:?defina PUBLIC_API_URL no .env.prod}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '80:80'
+
+volumes:
+  postgres_data:
+  redis_data:

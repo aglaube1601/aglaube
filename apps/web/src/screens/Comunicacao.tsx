@@ -30,6 +30,22 @@ const TEMPLATES = [
   { valor: 'jornal_medico', rotulo: 'Jornal' },
 ];
 
+// Texto de partida carregado na textarea ao trocar de modelo — sem isso,
+// só "Aniversário" parecia funcionar (por coincidência: era o texto
+// inicial do estado `mensagem`), e os outros chips pareciam não fazer
+// nada ao clicar. "Jornal" fica de fora: abre o composer próprio em vez
+// de preencher a textarea (ver onClick abaixo).
+const TEMPLATE_PADRAO: Record<string, string> = {
+  aniversario: 'Oi {{primeiro_nome}}! Passando pra desejar um feliz aniversário 🎉 Um abraço da nossa equipe.',
+  noticia: '📰 Novidade: [assunto da notícia]. Confira os detalhes e compartilhe com quem possa se interessar.',
+  lembrete_evento:
+    '🔔 Lembrete: o evento "[nome do evento]" acontece em breve, no dia [data], em [local]. Contamos com sua presença!',
+  convite_evento:
+    '📅 Você está convidado(a) para o evento "[nome do evento]", no dia [data], às [hora], em [local]. Esperamos por você!',
+  resposta_demanda:
+    'Oi {{primeiro_nome}}! Sobre a demanda que você registrou: [resumo da resposta/atualização]. Qualquer dúvida, estamos à disposição.',
+};
+
 const PUBLICOS = [
   { valor: 'aniversariantes_semana', rotulo: 'Aniversariantes da semana' },
   { valor: 'por_comunidade', rotulo: 'Por escola' },
@@ -209,6 +225,12 @@ export function Comunicacao() {
                 // jornal") não passa por aqui, então não perde o que já foi montado.
                 if (template !== 'jornal_medico') setMensagem('');
                 setJornalAberto(true);
+              } else if (t.valor !== template) {
+                // Troca de modelo (exceto reclicar no mesmo): carrega o texto
+                // de partida daquele modelo. Só não sobrescreve se o usuário
+                // já estiver no modelo clicado — clicar de novo no mesmo chip
+                // não deve apagar o que ele já editou.
+                setMensagem(TEMPLATE_PADRAO[t.valor] ?? '');
               }
               setTemplate(t.valor);
             }}

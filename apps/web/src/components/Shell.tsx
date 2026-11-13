@@ -7,6 +7,12 @@ const TABS: Array<{ to: string; label: string; icon: string; end?: boolean; perf
   { to: '/', label: 'Painel', icon: '📊', end: true },
   { to: '/mapa', label: 'Mapa', icon: '🗺️', perfis: ['administrador', 'coordenador', 'visualizacao'] },
   { to: '/contatos', label: 'Contatos', icon: '👤' },
+  {
+    to: '/rotas-campo',
+    label: 'Rotas',
+    icon: '🧭',
+    perfis: ['administrador', 'coordenador', 'operador'],
+  },
   { to: '/comunicacao', label: 'Mensagens', icon: '💬', perfis: ['administrador', 'coordenador', 'operador'] },
   { to: '/eleitoral', label: 'Eleitoral', icon: '🗳️', perfis: ['administrador', 'coordenador', 'visualizacao'] },
   { to: '/auditoria', label: 'Auditoria', icon: '🛡️', perfis: ['administrador'] },

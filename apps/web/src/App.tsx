@@ -12,6 +12,9 @@ import { DemandaDetalhe } from './screens/DemandaDetalhe';
 import { ListaDemandas } from './screens/ListaDemandas';
 import { PainelEleitoral } from './screens/PainelEleitoral';
 import { Auditoria } from './screens/Auditoria';
+import { ListaRotasCampo } from './screens/rotas-campo/ListaRotasCampo';
+import { NovaRotaCampo } from './screens/rotas-campo/NovaRotaCampo';
+import { DetalheRotaCampo } from './screens/rotas-campo/DetalheRotaCampo';
 
 function RotaProtegida({ children }: { children: React.ReactNode }) {
   const { usuario, loading } = useAuth();
@@ -42,6 +45,9 @@ function Rotas() {
         <Route path="/comunicacao" element={<Comunicacao />} />
         <Route path="/demandas" element={<ListaDemandas />} />
         <Route path="/demandas/:id" element={<DemandaDetalhe />} />
+        <Route path="/rotas-campo" element={<ListaRotasCampo />} />
+        <Route path="/rotas-campo/nova" element={<NovaRotaCampo />} />
+        <Route path="/rotas-campo/:id" element={<DetalheRotaCampo />} />
         <Route path="/eleitoral" element={<PainelEleitoral />} />
         <Route path="/auditoria" element={<Auditoria />} />
       </Route>

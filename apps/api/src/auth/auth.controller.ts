@@ -2,7 +2,7 @@
  * auth.controller.ts
  */
 
-import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Roles, RolesGuard, PerfilUsuario } from './roles.guard';
 import { CurrentUser } from './current-user.decorator';
@@ -32,6 +32,14 @@ export class UsuariosController {
   @Roles(PerfilUsuario.ADMINISTRADOR)
   async criar(@Body() dto: CreateUsuarioDto) {
     return this.authService.criarUsuario(dto);
+  }
+
+  // Lista enxuta pra popular seletor de responsável (ex: Rota de Campo) —
+  // mesmos perfis que montam/atribuem rota (ver RotasCampoController).
+  @Get()
+  @Roles(PerfilUsuario.ADMINISTRADOR, PerfilUsuario.COORDENADOR)
+  async listar(@Query('municipioId') municipioId: string) {
+    return this.authService.listarPorMunicipio(municipioId);
   }
 
   // Sem @Roles() de propósito: qualquer perfil autenticado atualiza a

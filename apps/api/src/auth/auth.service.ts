@@ -113,6 +113,18 @@ export class AuthService {
     return this.paraRespostaSemSenha(usuario);
   }
 
+  /**
+   * Lista enxuta (id/nome/perfil) pra popular seletor de responsável em
+   * outras telas (ex: atribuir Rota de Campo) — nunca email/senha aqui.
+   */
+  async listarPorMunicipio(municipioId: string): Promise<Array<{ id: string; nome: string; perfil: string }>> {
+    return this.prisma.usuario.findMany({
+      where: { municipioId },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, perfil: true },
+    });
+  }
+
   private normalizarEmail(email: string): string {
     return email.trim().toLowerCase();
   }

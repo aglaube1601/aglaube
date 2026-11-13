@@ -62,6 +62,7 @@ model Comunidade {
   // FK adicionada durante o desenvolvimento real — ver HANDOFF.md §3
   dadosEleitorais      DadosEleitoraisPublicos[]
   secoesEleitorais     SecaoEleitoral[]
+  rotasCampo           RotaCampo[]
 }
 
 // Relação seção eleitoral -> comunidade. Sem isso, todo dado importado do
@@ -108,6 +109,7 @@ model Contato {
   consentimentos        Consentimento[]
   eventosParticipados   EventoParticipante[]
   enviosMensagem        EnvioMensagem[]
+  paradasRota           ParadaRota[]
 
   // Índice de suporte ao dedup por similaridade — ver 0001_enable_pg_trgm.sql
   @@index([nome])
@@ -308,6 +310,47 @@ model Usuario {
   interacoes              Interacao[]
   logsAuditoria           LogAuditoria[]
   campanhasCriadas        CampanhaComunicacao[]
+  rotasCampoResponsavel   RotaCampo[]            @relation("RotasCampoResponsavel")
+  rotasCampoCriadas       RotaCampo[]            @relation("RotasCampoCriadas")
+}
+
+// ---------- ROTAS DE CAMPO ----------
+
+// Fase 1 (sem offline — ver conversa de produto): uma lista ordenada de
+// contatos de UMA comunidade, atribuída a um Usuario (Operador, em geral)
+// pra visitar porta a porta. NÃO otimiza por distância real — Contato.endereco
+// é texto livre, sem lat/long, e geocodificar endereço informal de zona
+// rural teria taxa de erro alta pra justificar o custo agora. Ordem vem de
+// quem monta a rota (ordinal simples em ParadaRota.ordem).
+model RotaCampo {
+  id            String   @id @default(uuid())
+  comunidadeId  String
+  comunidade    Comunidade @relation(fields: [comunidadeId], references: [id])
+  responsavelId String
+  responsavel   Usuario    @relation("RotasCampoResponsavel", fields: [responsavelId], references: [id])
+  criadaPorId   String
+  criadaPor     Usuario    @relation("RotasCampoCriadas", fields: [criadaPorId], references: [id])
+  // planejada | em_andamento | concluida — nunca setado direto por quem
+  // chama a API: é DERIVADO do status das paradas (ver RotasCampoService),
+  // pra nunca ficar dessincronizado do progresso real.
+  status        String     @default("planejada")
+  criadaEm      DateTime   @default(now())
+
+  paradas       ParadaRota[]
+}
+
+model ParadaRota {
+  id          String    @id @default(uuid())
+  rotaId      String
+  rota        RotaCampo @relation(fields: [rotaId], references: [id])
+  contatoId   String
+  contato     Contato   @relation(fields: [contatoId], references: [id])
+  ordem       Int
+  status      String    @default("pendente") // pendente | visitado | ausente | recusou
+  concluidaEm DateTime?
+
+  @@unique([rotaId, contatoId])
+  @@index([rotaId, ordem])
 }
 
 model LogAuditoria {

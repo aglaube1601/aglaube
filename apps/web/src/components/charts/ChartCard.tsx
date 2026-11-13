@@ -15,7 +15,7 @@ export function ChartCard({ title, subtitle, tableHeaders, tableRows, children }
   const [modoTabela, setModoTabela] = useState(false);
 
   return (
-    <div className="card">
+    <div className="chart-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 8 }}>
         <div>
           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700 }}>{title}</p>

@@ -18,6 +18,7 @@ describe('DashboardService', () => {
       interacao: { count: jest.fn() },
       demanda: { count: jest.fn() },
       eventoAcao: { findMany: jest.fn() },
+      engajamentoPolitico: { groupBy: jest.fn() },
       $queryRaw: jest.fn(),
     };
 
@@ -137,6 +138,59 @@ describe('DashboardService', () => {
       resumo.interacoesPorDia.forEach((d) => {
         expect(d.dia).toMatch(/^\d{4}-\d{2}-\d{2}$/);
         expect(typeof d.total).toBe('number');
+      });
+    });
+  });
+
+  describe('obterEngajamentoAgregado', () => {
+    it('agrega contagens por status quando o município tem contatos suficientes', async () => {
+      prisma.contato.count.mockResolvedValue(50);
+      prisma.engajamentoPolitico.groupBy.mockResolvedValue([
+        { status: 'apoiador', _count: { _all: 20 } },
+        { status: 'simpatizante', _count: { _all: 10 } },
+        { status: 'neutro', _count: { _all: 8 } },
+        { status: 'percepcao_negativa', _count: { _all: 5 } },
+        { status: 'desconhecido', _count: { _all: 7 } },
+      ]);
+
+      const resultado = await service.obterEngajamentoAgregado('municipio-1');
+
+      expect(resultado).toEqual({
+        apoiador: 20,
+        simpatizante: 10,
+        neutro: 8,
+        percepcaoNegativa: 5,
+        desconhecido: 7,
+      });
+      // Nem deveria ter consultado o groupBy se estivesse abaixo do piso
+      expect(prisma.contato.count).toHaveBeenCalledWith({
+        where: { comunidade: { bairro: { zonaEleitoral: { municipioId: 'municipio-1' } } } },
+      });
+    });
+
+    it('retorna null abaixo do piso de k-anonimato, sem consultar o groupBy', async () => {
+      prisma.contato.count.mockResolvedValue(4);
+
+      const resultado = await service.obterEngajamentoAgregado('municipio-novo');
+
+      expect(resultado).toBeNull();
+      expect(prisma.engajamentoPolitico.groupBy).not.toHaveBeenCalled();
+    });
+
+    it('preenche com zero os status sem nenhum registro vigente', async () => {
+      prisma.contato.count.mockResolvedValue(50);
+      prisma.engajamentoPolitico.groupBy.mockResolvedValue([
+        { status: 'apoiador', _count: { _all: 3 } },
+      ]);
+
+      const resultado = await service.obterEngajamentoAgregado('municipio-1');
+
+      expect(resultado).toEqual({
+        apoiador: 3,
+        simpatizante: 0,
+        neutro: 0,
+        percepcaoNegativa: 0,
+        desconhecido: 0,
       });
     });
   });

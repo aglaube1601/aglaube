@@ -28,4 +28,13 @@ export class DashboardController {
   async resumoExecutivo(@Param('municipioId') municipioId: string) {
     return this.dashboardService.obterResumoExecutivo(municipioId);
   }
+
+  // RBAC igual ao Mapa/Painel Eleitoral: Administrador, Coordenador,
+  // Visualização. Operador fica de fora — mesma fonte de dado sensível
+  // (EngajamentoPolitico), mesmo agregada e com k-anonimato aplicado.
+  @Get('engajamento-agregado')
+  @Roles(PerfilUsuario.ADMINISTRADOR, PerfilUsuario.COORDENADOR, PerfilUsuario.VISUALIZACAO)
+  async engajamentoAgregado(@Param('municipioId') municipioId: string) {
+    return this.dashboardService.obterEngajamentoAgregado(municipioId);
+  }
 }

@@ -21,6 +21,20 @@ import { StatusDemanda } from '../demandas/dto/create-demanda.dto';
 // constante mágica espalhada pelo código; só existe aqui.
 const LIMIAR_BAIXA_COBERTURA_CONTATOS = 10;
 
+// Mesmo k-anonimato simples do Mapa (ver mapa.service.ts): abaixo deste
+// total de contatos no MUNICÍPIO INTEIRO, a distribuição de engajamento
+// não é exposta, nem agregada — na prática só dispara em município novo
+// com poucos contatos cadastrados ainda.
+const PISO_K_ANONIMATO_ENGAJAMENTO = 5;
+
+export interface EngajamentoAgregado {
+  apoiador: number;
+  simpatizante: number;
+  neutro: number;
+  percepcaoNegativa: number;
+  desconhecido: number;
+}
+
 export interface ResumoExecutivo {
   totalContatos: number;
   novosContatos30Dias: number;
@@ -215,5 +229,55 @@ export class DashboardService {
         contato: { comunidade: { bairro: { zonaEleitoral: { municipioId } } } },
       },
     });
+  }
+
+  /**
+   * Distribuição agregada de EngajamentoPolitico no município inteiro, para
+   * o gráfico de composição do painel. Endpoint SEPARADO do resumo
+   * executivo (ver dashboard.controller.ts) — o resumo é visível a todo
+   * perfil autenticado, incluindo Operador, que não pode enxergar
+   * EngajamentoPolitico em NENHUMA forma (mesma régua do Mapa/Painel
+   * Eleitoral); misturar os dois neste método furaria essa régua.
+   */
+  async obterEngajamentoAgregado(municipioId: string): Promise<EngajamentoAgregado | null> {
+    const totalContatos = await this.prisma.contato.count({
+      where: { comunidade: { bairro: { zonaEleitoral: { municipioId } } } },
+    });
+
+    if (totalContatos < PISO_K_ANONIMATO_ENGAJAMENTO) {
+      return null;
+    }
+
+    const grupos = await this.prisma.engajamentoPolitico.groupBy({
+      by: ['status'],
+      where: { vigente: true, contato: { comunidade: { bairro: { zonaEleitoral: { municipioId } } } } },
+      _count: { _all: true },
+    });
+
+    const base: EngajamentoAgregado = {
+      apoiador: 0,
+      simpatizante: 0,
+      neutro: 0,
+      percepcaoNegativa: 0,
+      desconhecido: 0,
+    };
+
+    for (const g of grupos) {
+      const chave = this.mapStatusParaChave(g.status);
+      if (chave) base[chave] = g._count._all;
+    }
+
+    return base;
+  }
+
+  private mapStatusParaChave(status: string): keyof EngajamentoAgregado | null {
+    const mapa: Record<string, keyof EngajamentoAgregado> = {
+      apoiador: 'apoiador',
+      simpatizante: 'simpatizante',
+      neutro: 'neutro',
+      percepcao_negativa: 'percepcaoNegativa',
+      desconhecido: 'desconhecido',
+    };
+    return mapa[status] ?? null;
   }
 }
